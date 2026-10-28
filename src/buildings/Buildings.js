@@ -9,6 +9,9 @@ import { makeBuildingSandMaterial, makeSharedBuildingMaterials, makeFlagGeometry
 import { X0, Z0, CELL, BOUNDS } from '../world/config.js';
 import { clamp, damp, rnd, ease, smoothstep } from '../core/math.js';
 import { UNIT_TYPES } from '../entities/Sandling.js';
+import { globalUniforms } from '../world/shaderLib.js';
+
+const globalNight = () => globalUniforms.uNight.value;
 
 const modelCache = new Map();
 export function getModel(type) {
@@ -70,6 +73,7 @@ export class Building {
     this.height = this.model.height;
     this._makeVisual();
     if (opts.flatten !== false && !this.def.bridge && !this.def.trap) sim.flatten(x, z, this.radius * 0.95, this.baseY, 0.8);
+    if (!this.def.bridge) game.props.clearArea(x, z, this.radius * 1.05);
     this.colliders = [];
     this.boxes = [];
     this.cells = [];
@@ -516,11 +520,54 @@ export class Buildings {
   }
 
   update(dt) {
+    const game = this.game;
     for (let i = this.list.length - 1; i >= 0; i--) {
       const b = this.list[i];
       if (!b.alive) { this.list.splice(i, 1); continue; }
       b.update(dt);
     }
+    // windows and doorways glow warmly at dusk and night
+    const night = game.sky ? Math.min(1, globalNight() * 1.2 + Math.max(0, 0.15 - game.sky.sunElevation) * 2) : 0;
+    const flicker = 0.92 + 0.08 * Math.sin(game.time * 9.1) * Math.sin(game.time * 5.3);
+    this.mats.dark.emissive.setRGB(1.0, 0.55, 0.22);
+    this.mats.dark.emissiveIntensity = night * 2.4 * flicker;
+    this._fires(dt, night);
+  }
+
+  _fires(dt, night) {
+    const game = this.game;
+    if (!this.lights) {
+      this.lights = [];
+      for (let i = 0; i < 3; i++) {
+        const l = new THREE.PointLight(0xff9a4a, 0, 9, 1.8);
+        l.position.set(0, -50, 0);
+        game.scene.add(l);
+        this.lights.push(l);
+      }
+    }
+    const fires = [];
+    for (const b of this.list) {
+      if (!b.alive || b.state !== 'built') continue;
+      const f = b.slot('fire');
+      if (f) {
+        fires.push({ x: f.x, y: f.y + 0.3, z: f.z, k: 1 });
+        if (Math.random() < dt * 14) game.particles.ember(f.x, f.y + 0.05, f.z, 1);
+        if (Math.random() < dt * 3) game.particles.smoke(f.x, f.y + 0.3, f.z, 1, 0.8);
+      }
+      if (b.type === 'keep' || b.type === 'barracks' || b.type === 'house') {
+        const d = b.doorPoint(_v);
+        fires.push({ x: d.x, y: b.baseY + 0.8, z: d.z, k: b.type === 'keep' ? 1.4 : 0.6 });
+      }
+    }
+    const focus = game.rig.focusPoint;
+    fires.sort((a, c) => (a.x - focus.x) ** 2 + (a.z - focus.z) ** 2 - ((c.x - focus.x) ** 2 + (c.z - focus.z) ** 2));
+    this.lights.forEach((l, i) => {
+      const f = fires[i];
+      if (!f) { l.intensity = 0; return; }
+      l.position.set(f.x, f.y, f.z);
+      const flick = 0.85 + 0.15 * Math.sin(game.time * 13 + i * 2) * Math.sin(game.time * 7.7 + i);
+      l.intensity = (0.4 + night * 5) * f.k * flick;
+    });
   }
 
   nearestStorage(x, z) {

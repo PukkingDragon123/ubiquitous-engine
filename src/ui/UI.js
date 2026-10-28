@@ -202,7 +202,9 @@ export class UI {
     });
     ev.on('unitTrained', (u) => this.floater(u.pos.clone().setY(u.pos.y + 1.4), `${u.def.name} ready!`));
     ev.on('possessed', (u) => {
-      this.possessHint.innerHTML = `<b>${u.name}</b> <kbd>WASD</kbd> move · <kbd>Mouse</kbd> look · <kbd>LMB</kbd> ${u.def.ranged ? 'shoot' : 'strike'} · <kbd>RMB</kbd> grab/throw · <kbd>Space</kbd> jump · <kbd>Esc</kbd> leave`;
+      this.possessHint.innerHTML = u.type === 'dragon'
+        ? `<b>${u.name}</b> <kbd>WASD</kbd> fly · <kbd>Mouse</kbd> look · <kbd>Hold LMB</kbd> breathe fire · <kbd>Space</kbd>/<kbd>C</kbd> up/down · <kbd>Esc</kbd> leave`
+        : `<b>${u.name}</b> <kbd>WASD</kbd> move · <kbd>Mouse</kbd> look · <kbd>LMB</kbd> ${u.def.ranged ? 'shoot' : 'strike'} · <kbd>RMB</kbd> grab/throw · <kbd>Space</kbd> jump · <kbd>Esc</kbd> leave`;
       this.possessHint.classList.remove('hidden');
       this.crosshair.classList.toggle('hidden', !u.def.ranged);
       this.belt.classList.add('hidden');
@@ -221,6 +223,15 @@ export class UI {
     ev.on('gameover', (stats) => this._gameOver(stats));
     ev.on('kingDied', () => this.title('THE KING HAS FALLEN', 'the ring rolls into the surf…', { duration: 4, danger: true }));
     ev.on('phase', () => this._updateTide());
+    // little bits of life
+    ev.on('chatter', (u) => { if (Math.random() < 0.6) this.say(u, pick(['♪', '!', '?', '♥', '…', 'ha!', 'ooh', '♪♪', 'heh']), { small: true, silent: true, duration: 1.6, lift: 0.35 }); });
+    ev.on('panic', (u) => { if (Math.random() < 0.5) this.say(u, pick(['!', '!!', 'eek!', 'AAH']), { small: true, silent: true, duration: 1.2, lift: 0.35 }); });
+    ev.on('crabThrow', (c, u) => this.say(u, pick(['wheee!', 'AAAH!', 'nooo!']), { small: true, silent: true, duration: 1.4, lift: 0.35 }));
+    ev.on('swept', (u) => this.say(u, pick(['blub!', 'help!', 'glub glub']), { small: true, silent: true, duration: 1.4, lift: 0.35 }));
+    ev.on('groupLift', (it) => { const u = it.carriers[0]; if (u) this.say(u, pick(['hup!', 'heave!', 'together!']), { small: true, silent: true, duration: 1.2, lift: 0.35 }); });
+    ev.on('waveCleared', () => {
+      for (const u of this.game.units) if (u.alive && !u.hidden && Math.random() < 0.3) setTimeout(() => this.say(u, pick(['yay!', 'woo!', 'hooray!', '♪', 'we did it!']), { small: true, silent: true, duration: 1.8, lift: 0.35 }), Math.random() * 2000);
+    });
   }
 
   // ---- HUD ------------------------------------------------------------------------------
@@ -547,7 +558,7 @@ export class UI {
     const head = new THREE.Vector3();
     const a = this.anchor(el, () => (entity.headPos ? entity.headPos(head) : entity.pos).clone().add(new THREE.Vector3(0, (opts.lift ?? 0.45) * (entity.scale || 1), 0)), { life: dur });
     entity._bubble = a;
-    this.game.events.emit('say', entity, text, opts);
+    if (!opts.silent) this.game.events.emit('say', entity, text, opts);
     return a;
   }
 
@@ -577,6 +588,21 @@ export class UI {
       setTimeout(() => card.remove(), 700);
       if (this._title === card) this._title = null;
     }, (opts.duration || 2.5) * 1000);
+  }
+
+  // A huge spoken line in floating typography (used for dramatic declarations).
+  shout(text, duration = 3) {
+    const card = h('div', 'title-card shout-line');
+    const t = h('div', 't');
+    [...text].forEach((c, i) => {
+      const s = h('span', 'ch');
+      s.textContent = c;
+      s.style.animationDelay = `${i * 0.035}s`;
+      t.appendChild(s);
+    });
+    card.appendChild(t);
+    this.titles.appendChild(card);
+    setTimeout(() => { card.classList.add('out'); setTimeout(() => card.remove(), 700); }, duration * 1000);
   }
 
   toast(text, kind = '') {
@@ -702,6 +728,12 @@ export class UI {
     }
     this._tickInspect();
     this._hover();
+    // sleepy residents at night
+    this._zzz = (this._zzz || 0) - dt;
+    if (this._zzz <= 0) {
+      this._zzz = 2.2;
+      if (game.sky.isNight) for (const b of game.buildings.list) if (b.alive && (b.inside || 0) > 0 && !game.director.seaRising) this.floater(b.pos.clone().setY(b.baseY + b.height + 0.3), 'z z z');
+    }
     this.tutorial.update(dt);
     // puppets inside an inspected barracks swing at the training dummy
     if (this.puppets) for (const u of this.puppets) if (u.puppetAttack && Math.random() < 0.02) u.startAttack();

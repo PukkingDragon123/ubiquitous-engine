@@ -26,7 +26,8 @@ export const UNIT_TYPES = {
   archer: { name: 'Archer', hp: 38, speed: 3.1, dmg: 7, range: 13, cooldown: 1.6, scale: 1.0, hat: 'leaf', weapon: 'bow', armor: 0.05, ranged: true, cost: { shells: 8, driftwood: 3 }, pop: 1, color: 0xd8ad76 },
   spearman: { name: 'Spear Sandling', hp: 55, speed: 3.0, dmg: 8, range: 1.35, cooldown: 1.1, scale: 1.04, hat: 'band', weapon: 'spear', armor: 0.15, cost: { shells: 8, driftwood: 2 }, pop: 1, color: 0xd0a56e },
   cavalry: { name: 'Shell Rider', hp: 95, speed: 5.4, dmg: 11, range: 1.3, cooldown: 1.0, scale: 1.05, hat: 'helmet', weapon: 'spear', armor: 0.25, mount: true, cost: { shells: 16, seaweed: 6, pebbles: 4 }, pop: 2, color: 0xd2a872 },
-  king: { name: 'The Sand King', hp: 160, speed: 2.4, dmg: 12, range: 1.0, cooldown: 1.1, scale: 1.14, hat: 'crown', weapon: 'scepter', armor: 0.2, pop: 0, color: 0xe2bb82 },
+  dragon: { name: 'Sand Dragon', hp: 180, speed: 6.5, dmg: 24, range: 6.5, cooldown: 0, scale: 1.3, weapon: 'breath', armor: 0.2, flying: true, cost: { gems: 6, shells: 20, seaweed: 8 }, pop: 3, color: 0xdca56a },
+  king: { name: 'The Sand King', hp: 220, speed: 2.4, dmg: 12, range: 1.0, cooldown: 1.1, scale: 1.14, hat: 'crown', weapon: 'scepter', armor: 0.2, pop: 0, color: 0xe2bb82 },
 };
 
 const _v = new THREE.Vector3();
@@ -550,6 +551,14 @@ export class Sandling {
       this.shout = Math.max(this.shout, this.panic > 0 ? 0.3 : 0);
     }
 
+    // riding: sit on the horse's back
+    if (this.mounted && this.alive) {
+      rootY += 0.42 * s;
+      L[J.LFOOT][0] = 0.2; L[J.LFOOT][1] = 0.12; L[J.LFOOT][2] = 0.06;
+      L[J.RFOOT][0] = -0.2; L[J.RFOOT][1] = 0.12; L[J.RFOOT][2] = 0.06;
+      tilt += 0.08;
+    }
+
     // sitting
     if (this.sit) {
       L[J.PELVIS][1] = 0.0; L[J.PELVIS][2] = -0.04;
@@ -592,7 +601,7 @@ export class Sandling {
       let wx = this.pos.x + (b.lx * lx + b.fx * lz) * s;
       let wz = this.pos.z + (b.lz * lx + b.fz * lz) * s;
       let wy = baseY + ly * s + rootY;
-      if ((j === J.LFOOT || j === J.RFOOT) && !this.sit && this.swim < 0.5 && !(this.jumpY > 0)) {
+      if ((j === J.LFOOT || j === J.RFOOT) && !this.sit && this.swim < 0.5 && !(this.jumpY > 0) && !(this.mounted && this.alive)) {
         const ground = this.perch ? this.perch.y : this.game.walkHeight(wx, wz);
         wy = Math.max(ground + (ly - 0.06) * s + RADII[j] * s, wy - 0.2);
       }

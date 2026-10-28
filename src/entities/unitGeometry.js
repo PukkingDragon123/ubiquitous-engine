@@ -240,26 +240,55 @@ export function shovelGeometry() {
 }
 
 export function mountGeometry() {
-  // a sand-sculpted sea horse body for cavalry (local: y up, z forward)
-  const body = strip(new THREE.SphereGeometry(0.28, 16, 12));
-  body.scale(0.75, 0.7, 1.25);
-  body.translate(0, 0.32, 0);
-  const neck = strip(new THREE.CylinderGeometry(0.09, 0.14, 0.35, 10));
-  neck.rotateX(-0.5);
-  neck.translate(0, 0.56, 0.24);
-  const head = strip(new THREE.SphereGeometry(0.12, 12, 8));
-  head.scale(0.8, 0.8, 1.4);
-  head.translate(0, 0.72, 0.38);
-  const legs = [];
-  for (const [x, z] of [[0.12, 0.2], [-0.12, 0.2], [0.12, -0.2], [-0.12, -0.2]]) {
-    const l = strip(new THREE.CylinderGeometry(0.045, 0.05, 0.3, 6));
-    l.translate(x, 0.12, z);
-    legs.push(l);
+  // a sand-sculpted horse (local: y up, z forward); legs are separate
+  const body = strip(new THREE.SphereGeometry(0.25, 18, 12));
+  body.scale(0.9, 0.95, 1.7);
+  body.translate(0, 0.5, -0.02);
+  const chest = strip(new THREE.SphereGeometry(0.21, 14, 10));
+  chest.translate(0, 0.53, 0.26);
+  const rump = strip(new THREE.SphereGeometry(0.21, 14, 10));
+  rump.translate(0, 0.54, -0.3);
+  const neck = strip(new THREE.CylinderGeometry(0.085, 0.13, 0.42, 10));
+  neck.rotateX(0.62);
+  neck.translate(0, 0.72, 0.42);
+  const head = strip(new THREE.SphereGeometry(0.1, 12, 10));
+  head.scale(0.85, 0.95, 1.9);
+  head.rotateX(0.55);
+  head.translate(0, 0.9, 0.6);
+  const muzzle = strip(new THREE.SphereGeometry(0.075, 10, 8));
+  muzzle.translate(0, 0.8, 0.74);
+  const ears = [];
+  for (const x of [-0.045, 0.045]) {
+    const e = strip(new THREE.ConeGeometry(0.03, 0.09, 6));
+    e.translate(x, 1.0, 0.5);
+    ears.push(e);
   }
-  const tail = strip(new THREE.ConeGeometry(0.06, 0.3, 6));
-  tail.rotateX(-2.2);
-  tail.translate(0, 0.32, -0.42);
-  return merge([body, neck, head, ...legs, tail]);
+  return merge([body, chest, rump, neck, head, muzzle, ...ears]);
+}
+
+export function maneGeometry() {
+  const parts = [];
+  for (let i = 0; i < 7; i++) {
+    const t = i / 6;
+    const g = strip(new THREE.BoxGeometry(0.035, 0.12, 0.07));
+    g.rotateX(0.62);
+    g.translate(0, 0.62 + t * 0.32 + 0.06, 0.3 + t * 0.26 - 0.03);
+    parts.push(g);
+  }
+  const tail = strip(new THREE.ConeGeometry(0.07, 0.42, 6));
+  tail.rotateX(-2.5);
+  tail.translate(0, 0.42, -0.58);
+  parts.push(tail);
+  return merge(parts);
+}
+
+export function horseLegGeometry() {
+  // from the hip (y=0) down to the hoof (y=-0.42)
+  const leg = strip(new THREE.CylinderGeometry(0.045, 0.06, 0.38, 7));
+  leg.translate(0, -0.19, 0);
+  const hoof = strip(new THREE.CylinderGeometry(0.05, 0.055, 0.06, 7));
+  hoof.translate(0, -0.4, 0.005);
+  return merge([leg, hoof]);
 }
 
 export { colorize, merge, mergeVertices };

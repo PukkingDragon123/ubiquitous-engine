@@ -49,6 +49,7 @@ export class Economy {
   get pop() {
     let n = 0;
     for (const u of this.game.units) if (u.alive && u.type !== 'king' && !u.puppet) n += u.def.pop || 1;
+    for (const d of this.game.dragons) if (d.alive) n += d.def.pop;
     for (const b of this.game.buildings.list) for (const q of b.queue) n += 1;
     return n;
   }

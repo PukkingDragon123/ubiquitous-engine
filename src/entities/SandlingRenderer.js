@@ -55,6 +55,8 @@ export class SandlingRenderer {
     this.leg = L(G.limbGeometry(0.062, this.legLen, 0.06), sand, MAXU * 2 + 60, { fx: true });
     this.foot = L(G.footGeometry(), sand, MAXU * 2, { fx: true });
     this.mount = L(G.mountGeometry(), sand, 80, { fx: true });
+    this.mountLeg = L(G.horseLegGeometry(), sand, 320, { fx: true });
+    this.mane = L(G.maneGeometry(), new THREE.MeshStandardMaterial({ color: 0x4f7a36, roughness: 0.7 }), 80, { colors: false });
 
     const eyeMat = new THREE.MeshStandardMaterial({ color: 0x15100c, roughness: 0.18, metalness: 0 });
     this.eye = L(G.eyeGeometry(), eyeMat, MAXU * 2 + 120, { colors: false, cast: false });
@@ -84,7 +86,7 @@ export class SandlingRenderer {
     this.shovel = L(G.shovelGeometry(), plastic, MAXU);
     const ringMat = new THREE.MeshBasicMaterial({ color: 0xfff3c4, transparent: true, opacity: 0.85, depthWrite: false });
     this.ring = L(G.selectionRingGeometry(), ringMat, MAXU, { colors: true, cast: false, receive: false, order: 3 });
-    this.layers = [this.head, this.torso, this.arm, this.leg, this.foot, this.mount, this.eye, this.deadEye, this.mouth, this.stump,
+    this.layers = [this.head, this.torso, this.arm, this.leg, this.foot, this.mount, this.mountLeg, this.mane, this.eye, this.deadEye, this.mouth, this.stump,
       this.bucketHat, this.helmet, this.leafHat, this.band, this.crown, this.diamond, this.sword, this.shield, this.bow, this.spear, this.scepter, this.shovel, this.ring];
     this.swordColors = [0xff5d8f, 0x3fd3c4, 0xffc23d, 0x8a7dff];
     this.shieldColors = [0xd8342c, 0x2e6fd8, 0xe8b630, 0x3aa35a];
@@ -120,9 +122,24 @@ export class SandlingRenderer {
       _p.set(u.pos.x, u.pos.y, u.pos.z);
       FH.set(Math.sin(u.yaw), 0, Math.cos(u.yaw));
       LH.set(FH.z, 0, -FH.x);
-      _p.y += Math.abs(Math.sin(u.phase * Math.PI * 2)) * 0.05;
-      basisMatrix(_m, LH, Y, FH, _p, s * 1.1);
-      this.mount.push(_m, _c.copy(col).multiplyScalar(0.92), wet, fl);
+      const gal = u.phase * Math.PI * 2;
+      const moving = (u.speed || 0) > 0.3;
+      _p.y += moving ? Math.abs(Math.sin(gal)) * 0.06 : 0;
+      const ms = s * 1.1;
+      basisMatrix(_m, LH, Y, FH, _p, ms);
+      const mcol = _c.copy(col).multiplyScalar(0.92);
+      this.mount.push(_m, mcol, wet, fl);
+      this.mane.push(_m);
+      // galloping legs swing about the hips
+      const legs = [[0.11, 0.27, 0], [-0.11, 0.27, 0.5], [0.11, -0.28, 0.75], [-0.11, -0.28, 0.25]];
+      for (const [lx, lz, off] of legs) {
+        const swing = moving ? Math.sin(gal + off * Math.PI * 2) * 0.6 : 0;
+        const hip = TMP.copy(_p).addScaledVector(LH, lx * ms).addScaledVector(FH, lz * ms).addScaledVector(Y, 0.42 * ms);
+        _q.setFromAxisAngle(LH, swing);
+        _m.makeBasis(LH, Y, FH).premultiply(new THREE.Matrix4().makeRotationFromQuaternion(_q));
+        _m.scale(_s.setScalar(ms)).setPosition(hip);
+        this.mountLeg.push(_m, mcol, wet, fl);
+      }
     }
 
     basisMatrix(_m, LEFT, UP, FWD, A, s);

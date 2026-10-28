@@ -227,7 +227,7 @@ export function keepModel() {
   // shells pressed into the walls
   for (let i = 0; i < 18; i++) {
     const a = rng() * Math.PI * 2;
-    shellAccent(b, 'shell', Math.cos(a) * 1.5, 1.0 + rng() * 2.6, -0.6 + Math.sin(a) * 1.5, -a + Math.PI / 2, 0.22 + rng() * 0.1, 'scallop', [0xf6e0cf, 0xf4b9a0, 0xffe7d1][i % 3], 0);
+    shellAccent(b, 'shell', Math.cos(a) * 1.5, 1.0 + rng() * 2.6, -0.6 + Math.sin(a) * 1.5, -a + Math.PI / 2, 0.22 + rng() * 0.1, 'scallop', [0xf2c9a8, 0xeea688, 0xf6d8b4][i % 3], 0);
   }
   // garrison spots on corner towers
   b.slots.garrison = [[-3, 2.95, -3], [3, 2.95, -3], [-3, 2.95, 3], [3, 2.95, 3]].map(([x, y, z]) => ({ x, y, z }));

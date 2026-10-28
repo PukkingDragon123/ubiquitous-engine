@@ -104,12 +104,12 @@ export class Intro {
     game.scene.add(this.ring);
 
     // our hero, not yet a king
-    const hero = (this.hero = game.spawnUnit('king', 15, -2.5, { yaw: -2.2, name: 'Pip' }));
+    const hero = (this.hero = game.spawnUnit('king', 22, -4.5, { yaw: -2.2, name: 'Pip' }));
     hero.crownHidden = true;
     hero.def = { ...hero.def, weapon: null };
     game.king = hero;
     // the crab with the rusty fork
-    const crab = (this.crab = game.enemyManager.spawn('forker', 18.5, -4.5, { yaw: -2.2, scale: 1.25 }));
+    const crab = (this.crab = game.enemyManager.spawn('forker', 25.5, -6.5, { yaw: -2.2, scale: 1.25 }));
     crab.scripted = true;
     crab.def = { ...crab.def, speed: 2.5 };
 
@@ -125,8 +125,9 @@ export class Intro {
     ui.subtitle('On a quiet beach, at the edge of an enormous sea…');
     // hero starts running in panic, crab gives chase
     hero.panic = 20;
-    hero.speedMul = 1.15;
+    hero.speedMul = 0.62;
     hero.moveTo(ringPos.x + 0.6, ringPos.z - 0.9, 0.2);
+    this.crabChase = true;
     await this.wait(2.8);
 
     // --- shot B: tracking the chase -------------------------------------------------------------
@@ -137,11 +138,15 @@ export class Intro {
       const mid = tmp.copy(hp).lerp(crab.pos, 0.35);
       return { pos: new THREE.Vector3(mid.x + 5.5 - u * 2, hp.y + 1.7, mid.z + 3.2), look: new THREE.Vector3(mid.x, hp.y + 0.45, mid.z), fov: 36, focus: 0.35 };
     }, ease.linear);
-    this.crabChase = true;
     await this.wait(5.2);
     ui.subtitle(null);
     // trip right next to the ring
-    for (let i = 0; i < 40 && hero.pos.distanceTo(ringPos) > 1.3; i++) await this.wait(0.1);
+    for (let i = 0; i < 60 && hero.pos.distanceTo(ringPos) > 1.4; i++) await this.wait(0.1);
+    if (hero.pos.distanceTo(ringPos) > 1.4) {
+      // running late: give him a helpful little teleport just off camera
+      hero.pos.set(ringPos.x + 1.2, hero.pos.y, ringPos.z - 0.8);
+      for (const i of hero.p) if (i >= 0) game.verlet.teleport(i, hero.pos.x, sim.heightAt(hero.pos.x, hero.pos.z) + 0.5, hero.pos.z);
+    }
     hero.panic = 0;
     hero.stop();
     hero.knockDown(1.6);
@@ -177,16 +182,18 @@ export class Intro {
 
     // --- shot D: heroic low angle ------------------------------------------------------------------
     hero.lookAt = crab.pos;
+    const face = hero.yaw;
     this.setShot(4, (u) => {
       const hp = hero.pos;
-      const dir = _v.set(crab.pos.x - hp.x, 0, crab.pos.z - hp.z).normalize();
-      return { pos: new THREE.Vector3(hp.x + dir.x * 1.8 + 0.6, hp.y + 0.35, hp.z + dir.z * 1.8 + 0.4), look: new THREE.Vector3(hp.x, hp.y + 0.85, hp.z), fov: 38 - u * 4, focus: 0.15 };
+      const fx = Math.sin(hero.yaw), fz = Math.cos(hero.yaw);
+      return { pos: new THREE.Vector3(hp.x + fx * 2.3 - fz * 0.7, hp.y + 0.3, hp.z + fz * 2.3 + fx * 0.7), look: new THREE.Vector3(hp.x, hp.y + 0.75, hp.z), fov: 40 - u * 5, focus: 0.15 };
     });
     await this.wait(0.6);
     hero.setAnim('pose');
-    ui.say(hero, 'I WILL DEFEND THIS WITH MY LIFE!', { shout: true, duration: 3.2, lift: 0.6 });
+    ui.shout('I WILL DEFEND THIS WITH MY LIFE!', 3.4);
+    game.events.emit('say', hero, 'I will defend this with my life', { king: true, shout: true });
     game.audio.sting('fanfare');
-    await this.wait(3.2);
+    await this.wait(3.4);
 
     // --- shot E: the castle rises out of the sand ----------------------------------------------------
     hero.stop();
@@ -198,9 +205,13 @@ export class Intro {
     game.particles.dust(0, sim.heightAt(0, 6) + 0.2, 6, 30, 3);
     const keep = (game.keep = game.buildings.place('keep', 0, 6, 0, { free: true }));
     keep.delivered = keep.toDeliver;
+    // seen from the sea side, where the crab is
+    const cdx = crab.pos.x - 0, cdz = crab.pos.z - 6;
+    const cl = Math.hypot(cdx, cdz) || 1;
+    const sideX = cdx / cl, sideZ = cdz / cl;
     this.setShot(4.2, (u) => ({
-      pos: new THREE.Vector3(lerp(4, 13, u), lerp(2.2, 9, u), lerp(12, 20, u)),
-      look: new THREE.Vector3(0, keep.baseY + lerp(0.8, 2, u), 6),
+      pos: new THREE.Vector3(sideX * lerp(8, 15, u) + sideZ * 4, lerp(2.4, 8, u), 6 + sideZ * lerp(8, 15, u) - sideX * 4),
+      look: new THREE.Vector3(sideX * 2, keep.baseY + lerp(0.8, 1.8, u), 6 + sideZ * 2),
       fov: 36, focus: 0.5,
     }));
     const rise = 2.6;
@@ -224,10 +235,10 @@ export class Intro {
 
     // the crab bonks into the wall
     crab.scripted = true;
-    this.crabTarget = new THREE.Vector3(1.5, 0, 10.5);
+    this.crabTarget = new THREE.Vector3(0, 0, 6);
     this.crabMode = 'charge';
-    await this.wait(1.2);
-    crab.applyImpulse(0, 3, 4);
+    for (let i = 0; i < 20 && crab.pos.distanceTo(_v.set(0, crab.pos.y, 6)) > keep.radius + 0.9; i++) await this.wait(0.1);
+    crab.applyImpulse(sideX * 4, 3, sideZ * 4);
     crab.knockDown(1.5);
     game.events.emit('enemyHit', crab, 0, {});
     game.rig.addShake(0.2);
@@ -283,8 +294,13 @@ export class Intro {
         c.vel.x = (dx / d) * 3; c.vel.z = (dz / d) * 3;
         c.goalYaw = Math.atan2(dx, dz);
       } else if (this.crabMode === 'retreat') {
-        c.vel.x = 0.4; c.vel.z = -2.6;
-        c.goalYaw = Math.atan2(0.4, -2.6) + Math.PI / 2;
+        // away from the castle and into the sea
+        const ax = c.pos.x, az = c.pos.z - 6;
+        const al = Math.hypot(ax, az) || 1;
+        let vx = (ax / al) * 0.8, vz = (az / al) * 0.8 - 2.2;
+        const vl = Math.hypot(vx, vz);
+        c.vel.x = (vx / vl) * 2.6; c.vel.z = (vz / vl) * 2.6;
+        c.goalYaw = Math.atan2(c.vel.x, c.vel.z) + Math.PI / 2;
         c.state = 'walk';
       } else {
         c.vel.multiplyScalar(0.85);

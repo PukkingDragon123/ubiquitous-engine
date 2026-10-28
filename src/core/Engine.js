@@ -67,6 +67,7 @@ export class Engine {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     container.appendChild(renderer.domElement);
     renderer.domElement.tabIndex = 0;
+    renderer.info.autoReset = false;
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(34, window.innerWidth / window.innerHeight, 0.08, 6000);
@@ -140,6 +141,7 @@ export class Engine {
 
   render(dt) {
     this.grade.uniforms.get('uTimeG').value += dt;
+    this.renderer.info.reset();
     this.composer.render(dt);
   }
 }

@@ -16,6 +16,7 @@ import { BOUNDS } from '../world/config.js';
 import { Verlet } from '../entities/Verlet.js';
 import { Limbs } from '../entities/Limbs.js';
 import { Sandling } from '../entities/Sandling.js';
+import { Dragon } from '../entities/Dragon.js';
 import { SandlingRenderer } from '../entities/SandlingRenderer.js';
 import { Items } from '../entities/Items.js';
 import { Boulders } from '../entities/Boulders.js';
@@ -52,6 +53,7 @@ export class Game {
     this.verlet = new Verlet(this.sim);
     this.limbs = new Limbs(this);
     this.units = [];
+    this.dragons = [];
     this.puppets = [];
     this.spatial = new SpatialHash(2);
     this.staticColliders = [];
@@ -64,6 +66,7 @@ export class Game {
     this.unitRenderer = new SandlingRenderer(this.scene);
     this.economy = new Economy(this);
     this.buildings = new Buildings(this);
+    this.rig.buildings = this.buildings;
     this.items = new Items(this);
     this.boulders = new Boulders(this);
     this.enemies = [];
@@ -118,6 +121,8 @@ export class Game {
         const w = this.spawnUnit('worker', rnd(-2, 2), 11 + rnd(-0.5, 0.5));
         w.home = this.keep;
       }
+      const guard = this.spawnUnit('knight', 2.5, 10.5, { name: 'Sir Crumbsalot' });
+      guard.home = this.keep;
     }
     if (!this.items.list.length) this.items.scatter(85);
     this.economy.res.shells = Math.max(this.economy.res.shells, 14);
@@ -222,6 +227,12 @@ export class Game {
   }
 
   spawnUnit(type, x, z, opts) {
+    if (type === 'dragon') {
+      const d = new Dragon(this, x, z, opts);
+      this.dragons.push(d);
+      this.events.emit('unitSpawned', d);
+      return d;
+    }
     const u = new Sandling(this, type, x, z, opts);
     this.units.push(u);
     this.events.emit('unitSpawned', u);
@@ -279,6 +290,16 @@ export class Game {
       this.buildings.update(dt);
       this.projectiles.update(dt);
       this.particles.update(dt);
+      this.intro.update(dt);
+    }
+  }
+
+  // Like fastForward, but yields to the microtask queue so async scripts (the intro) advance.
+  async fastForwardAsync(seconds) {
+    const steps = Math.round(seconds * 60);
+    for (let i = 0; i < steps; i++) {
+      this.fastForward(1 / 60);
+      await null;
     }
   }
 
@@ -374,6 +395,11 @@ export class Game {
       this.combatAI.update(STEP);
       this.enemyManager.update(STEP);
       for (const u of this.units) u.preStep(STEP, this.physTime);
+      for (let i = this.dragons.length - 1; i >= 0; i--) {
+        const d = this.dragons[i];
+        if (!d.alive) { this.dragons.splice(i, 1); continue; }
+        d.update(STEP);
+      }
       this.verlet.step(STEP);
       this.limbs.update(STEP);
       for (let i = this.units.length - 1; i >= 0; i--) {

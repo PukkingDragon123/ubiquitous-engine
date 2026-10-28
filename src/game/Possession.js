@@ -40,6 +40,7 @@ export class Possession {
     if (u.garrisoned) game.combatAI.ungarrison(u);
     if (u.sit && u.type === 'king') u.sit = null;
     if (u.job) game.workerAI._clearJob(u);
+    if (u.type === 'dragon') { game.rig.followDist = 4.5; }
     this.active = true;
     this.unit = u;
     u.possessed = true;
@@ -87,7 +88,7 @@ export class Possession {
 
   _attack() {
     const u = this.unit;
-    if (!u || !u.isActive) return;
+    if (!u || !u.isActive || u.type === 'dragon') return;
     if (this.held) { this._throw(1); return; }
     if (u.def.ranged) {
       if (u.startAttack()) {
@@ -104,7 +105,7 @@ export class Possession {
 
   _jump() {
     const u = this.unit;
-    if (!u || !u.isActive || u.jumpY > 0) return;
+    if (!u || !u.isActive || u.jumpY > 0 || u.type === 'dragon') return;
     u.jumpV = 5.2;
     u.jumpY = 0.001;
     this.game.particles.dust(u.pos.x, u.pos.y, u.pos.z, 3, 0.4);
@@ -114,7 +115,7 @@ export class Possession {
   _grabOrThrow() {
     const game = this.game;
     const u = this.unit;
-    if (!u || !u.isActive) return;
+    if (!u || !u.isActive || u.type === 'dragon') return;
     if (this.held) { this._throw(1); return; }
     // grab something in front: crab, item or another sandling
     const fx = Math.sin(u.yaw), fz = Math.cos(u.yaw);
@@ -200,6 +201,11 @@ export class Possession {
     let dx = fx * mz + lx * mx, dz = fz * mz + lz * mx;
     const l = Math.hypot(dx, dz);
     if (l > 0) { dx /= l; dz /= l; }
+    if (u.type === 'dragon') {
+      const up = (k.Space ? 1 : 0) - (k.KeyC || k.ControlLeft ? 1 : 0);
+      u.manual = { x: dx, z: dz, y: up, sprint: !!(k.ShiftLeft || k.ShiftRight), face: camYaw, fire: input.isDown(0) };
+      return;
+    }
     const attacking = u.attackT >= 0;
     u.manual = { x: dx, z: dz, sprint: !!(k.ShiftLeft || k.ShiftRight), face: (l > 0 && !attacking) ? Math.atan2(dx, dz) : camYaw };
     // keep held things above the head

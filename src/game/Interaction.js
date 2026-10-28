@@ -268,6 +268,8 @@ export class Interaction {
     let y = g.sim.heightAt(this.cursor.x, this.cursor.z);
     if (h.kind === 'unit' || h.kind === 'enemy') {
       if (!obj.p || !obj.p.length) return;
+      if (h.kind === 'enemy' && (obj.def.boss || obj.size > 2)) { g.events.emit('toast', 'Far too heavy to lift!', 'warn'); return; }
+      if (obj.type === 'dragon') return;
       obj.held = true;
       if (obj.knockDown) obj.knockDown(1);
       const pi = obj.grabParticle ? obj.grabParticle() : obj.p[3] >= 0 ? obj.p[3] : obj.p[0];
@@ -513,6 +515,7 @@ export class Interaction {
     };
     for (const u of g.units) if (u.alive && !u.hidden && u.p.length) { u.centerPos(_v); test('unit', u, _v.x, _v.y + 0.15, _v.z, 26); }
     for (const e of g.enemies) if (e.alive && e.p && e.p.length) test('enemy', e, e.pos.x, e.pos.y + 0.4 * (e.size || 1), e.pos.z, 30 * Math.min(2.5, e.size || 1));
+    for (const d of g.dragons) if (d.alive) test('unit', d, d.pos.x, d.pos.y, d.pos.z, 34);
     for (const it of g.items.list) if (!it.carried) test('item', it, it.pos.x, it.pos.y + 0.1, it.pos.z, 20);
     if (g.boulders) for (const b of g.boulders.list) test('boulder', b, b.pos.x, b.pos.y + b.r * 0.4, b.pos.z, 26 + b.r * 10);
     if (best) return best;

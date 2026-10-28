@@ -625,6 +625,10 @@ export class Audio {
     ev.on('jump', (u) => this.tone(u.pos, { freq: 400, to: 800, dur: 0.12, type: 'triangle', vol: 0.1 }));
     ev.on('possessed', (u) => this.tone(null, { freq: 300, to: 900, dur: 0.35, type: 'sine', vol: 0.12, verb: 0.4 }));
     ev.on('unpossessed', () => this.tone(null, { freq: 900, to: 300, dur: 0.3, type: 'sine', vol: 0.1, verb: 0.4 }));
+    ev.on('dragonFire', (d) => { if (this._limit('fire', 120)) this.noise(d.pos, { dur: 0.35, freq: 900, sweepTo: 400, q: 0.6, vol: 0.18, buf: 'pink' }); });
+    ev.on('bossWindup', (c) => this.babble(c.pos, 'grrrooaa', { pitch: 60, crab: true, vol: 0.18, speed: 0.6, shout: true }));
+    ev.on('bossStomp', (c) => { this.tone(c.pos, { freq: 70, to: 25, dur: 1.2, vol: 0.6 }); this.noise(c.pos, { dur: 1.4, freq: 600, sweepTo: 80, q: 0.5, vol: 0.55, buf: 'brown', verb: 0.4 }); });
+    ev.on('bossSummon', (c) => { this.horn(); });
     ev.on('title', (t, opts) => { if (!opts.danger) this.tone(null, { freq: 523, dur: 0.6, type: 'triangle', vol: 0.05, verb: 0.5 }); });
   }
 

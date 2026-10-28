@@ -20,10 +20,10 @@ export class Projectiles {
     const tip = new THREE.ConeGeometry(0.022, 0.07, 5);
     tip.rotateX(Math.PI / 2);
     tip.translate(0, 0, 0.3);
-    this.arrow = new InstancedLayer(root, arrowGeo, new THREE.MeshStandardMaterial({ color: 0xe8d3a8, roughness: 0.7 }), 400, { colors: false });
-    this.arrowTip = new InstancedLayer(root, tip, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 }), 400, { colors: true });
-    this.ball = new InstancedLayer(root, makeRockGeometry(1234, { detail: 1, flat: 0.9 }), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7 }), 120, { colors: false });
-    this.bubble = new InstancedLayer(root, new THREE.SphereGeometry(0.5, 14, 10), new THREE.MeshStandardMaterial({ color: 0xbfefff, roughness: 0.05, transparent: true, opacity: 0.55, emissive: 0x2a6a80, emissiveIntensity: 0.4 }), 80, { colors: false, cast: false });
+    this.arrowLayer = new InstancedLayer(root, arrowGeo, new THREE.MeshStandardMaterial({ color: 0xe8d3a8, roughness: 0.7 }), 400, { colors: false });
+    this.tipLayer = new InstancedLayer(root, tip, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 }), 400, { colors: true });
+    this.ballLayer = new InstancedLayer(root, makeRockGeometry(1234, { detail: 1, flat: 0.9 }), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7 }), 120, { colors: false });
+    this.bubbleLayer = new InstancedLayer(root, new THREE.SphereGeometry(0.5, 14, 10), new THREE.MeshStandardMaterial({ color: 0xbfefff, roughness: 0.05, transparent: true, opacity: 0.55, emissive: 0x2a6a80, emissiveIntensity: 0.4 }), 80, { colors: false, cast: false });
   }
 
   // velocity that reaches `to` from `from` in time t
@@ -185,22 +185,22 @@ export class Projectiles {
   }
 
   render() {
-    this.arrow.begin(); this.arrowTip.begin(); this.ball.begin(); this.bubble.begin();
+    this.arrowLayer.begin(); this.tipLayer.begin(); this.ballLayer.begin(); this.bubbleLayer.begin();
     for (const p of this.list) {
       if (p.kind === 'arrow') {
         if (!p.q) continue;
         _m.compose(p.pos, p.q, _s.setScalar(1));
-        this.arrow.push(_m);
-        this.arrowTip.push(_m, p.color);
+        this.arrowLayer.push(_m);
+        this.tipLayer.push(_m, p.color);
       } else if (p.kind === 'ball') {
         _q.setFromEuler(p.rot);
         _m.compose(p.pos, _q, _s.setScalar(p.size));
-        this.ball.push(_m);
+        this.ballLayer.push(_m);
       } else if (p.kind === 'bubble') {
         _m.compose(p.pos, _q.identity(), _s.setScalar(p.size));
-        this.bubble.push(_m);
+        this.bubbleLayer.push(_m);
       }
     }
-    this.arrow.end(); this.arrowTip.end(); this.ball.end(); this.bubble.end();
+    this.arrowLayer.end(); this.tipLayer.end(); this.ballLayer.end(); this.bubbleLayer.end();
   }
 }

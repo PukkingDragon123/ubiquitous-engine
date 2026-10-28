@@ -133,7 +133,7 @@ export class Director {
   _composition(n) {
     const groups = [];
     const boss = n % 5 === 0;
-    const count = Math.round(4 + n * 2.3 + (n > 6 ? (n - 6) * 1.5 : 0));
+    const count = Math.round(2.5 + n * 1.8 + (n > 6 ? (n - 6) * 1.5 : 0));
     const pool = ['forker'];
     if (n >= 2) pool.push('knifer', 'forker');
     if (n >= 3) pool.push('spooner');

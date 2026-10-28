@@ -147,7 +147,7 @@ export function makeSharedBuildingMaterials() {
   const flat = (o) => new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0, ...o });
   return {
     wood: flat({ roughness: 0.82 }),
-    shell: flat({ roughness: 0.32 }),
+    shell: flat({ roughness: 0.6 }),
     stone: flat({ roughness: 0.85 }),
     dark: new THREE.MeshStandardMaterial({ color: 0x24170f, roughness: 1 }),
     cloth: flat({ roughness: 0.92, side: THREE.DoubleSide }),

@@ -223,13 +223,12 @@ export function makePalm(seed = 1, { height = 9 } = {}) {
 }
 
 // ---- bush (sea grape style: clusters of round leaves) -------------------------
-export function makeBush(seed = 1, { size = 1, flowers = true } = {}) {
+export function makeBush(seed = 1, { size = 1, flowers = true, leaves = 70, seg = 7 } = {}) {
   const rng = mulberry32(seed * 313 + 5);
   const parts = [];
-  const leaves = 70;
   const leafA = new THREE.Color(0x3d6b2c), leafB = new THREE.Color(0x8bb04f), red = new THREE.Color(0xa64a2f);
   for (let i = 0; i < leaves; i++) {
-    const g = new THREE.CircleGeometry(0.16 * size * (0.7 + rng() * 0.6), 7);
+    const g = new THREE.CircleGeometry(0.16 * size * (0.7 + rng() * 0.6) * (leaves < 50 ? 1.35 : 1), seg);
     g.deleteAttribute('uv');
     // cup the leaf
     const p = g.attributes.position;
@@ -282,7 +281,7 @@ export function makeCoral(seed = 1, kind = 'branch') {
   if (kind === 'branch') {
     const branch = (start, dir, len, rad, depth) => {
       const end = start.clone().addScaledVector(dir, len);
-      const g = new THREE.CylinderGeometry(rad * 0.7, rad, len, 6, 1);
+      const g = new THREE.CylinderGeometry(rad * 0.7, rad, len, 5, 1, true);
       g.deleteAttribute('uv');
       g.translate(0, len / 2, 0);
       const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
@@ -291,14 +290,14 @@ export function makeCoral(seed = 1, kind = 'branch') {
       const t = depth / 4;
       setColors(g, (k, x, y, z, nx, ny, nz2, out) => out.copy(col).lerp(tip, t));
       parts.push(g);
-      if (depth < 3) {
+      if (depth < 2) {
         const n = 2 + Math.floor(rng() * 2);
         for (let i = 0; i < n; i++) {
           const nd = dir.clone().add(new THREE.Vector3((rng() - 0.5) * 1.3, rng() * 0.4, (rng() - 0.5) * 1.3)).normalize();
           branch(end, nd, len * (0.65 + rng() * 0.2), rad * 0.7, depth + 1);
         }
       } else {
-        const s = new THREE.SphereGeometry(rad * 1.1, 6, 4);
+        const s = new THREE.SphereGeometry(rad * 1.25, 5, 3);
         s.deleteAttribute('uv');
         s.translate(end.x, end.y, end.z);
         setColors(s, (k, x, y, z, nx, ny, nz2, out) => out.copy(tip));
@@ -306,7 +305,7 @@ export function makeCoral(seed = 1, kind = 'branch') {
       }
     };
     for (let i = 0; i < 3; i++) {
-      branch(new THREE.Vector3((rng() - 0.5) * 0.2, 0, (rng() - 0.5) * 0.2), new THREE.Vector3((rng() - 0.5) * 0.6, 1, (rng() - 0.5) * 0.6).normalize(), 0.32, 0.07, 0);
+      branch(new THREE.Vector3((rng() - 0.5) * 0.2, 0, (rng() - 0.5) * 0.2), new THREE.Vector3((rng() - 0.5) * 0.6, 1, (rng() - 0.5) * 0.6).normalize(), 0.4, 0.08, 0);
     }
   } else if (kind === 'brain') {
     let g = new THREE.SphereGeometry(0.5, 20, 14);

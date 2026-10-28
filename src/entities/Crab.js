@@ -292,6 +292,14 @@ export class Crab {
     const s = this.size;
     const b = this._basis();
     let lunge = 0, rear = 0, bob = 0;
+    if (this.stomping > 0) {
+      const prev = this.stomping;
+      this.stomping = Math.max(0, this.stomping - dt);
+      const k = 1 - this.stomping / 0.9;
+      rear = k < 0.75 ? smoothstep(0, 0.75, k) * 1.6 : 0;
+      lunge = k >= 0.75 ? 1 - smoothstep(0.75, 1, k) : 0;
+      if (prev > 0.9 * 0.25 && this.stomping <= 0.9 * 0.25) this.game.enemyManager.ai._stomp(this);
+    }
     if (this.attackT >= 0) {
       const at = this.attackT;
       rear = smoothstep(0, 0.45, at) * (1 - smoothstep(0.45, 0.6, at));
@@ -364,14 +372,17 @@ export class Crab {
       want.y = sim.heightAt(want.x, want.z);
       const foot = this.legFeet[i];
       if (this.legLift[i] > 0) {
-        this.legLift[i] = Math.max(0, this.legLift[i] - dt / 0.11);
+        this.legLift[i] = Math.max(0, this.legLift[i] - dt / (0.11 / Math.max(1, (this.speed || 0) / 2)));
         const k = 1 - this.legLift[i];
         foot.lerpVectors(this.legFrom[i], this.legTo[i], k);
         foot.y += Math.sin(k * Math.PI) * 0.18 * s;
       } else {
         const d = Math.hypot(foot.x - want.x, foot.z - want.z);
         const groupOk = this.legLift[(i + 1) % 8] === 0 && this.legLift[(i + 7) % 8] === 0;
-        if (d > 0.22 * s && groupOk) {
+        if (d > 0.7 * s) {
+          // fell far behind (fast motion / teleport): plant it right away
+          foot.copy(want);
+        } else if (d > 0.22 * s && (groupOk || d > 0.4 * s)) {
           this.legLift[i] = 1;
           this.legFrom[i].copy(foot);
           this.legTo[i].copy(want).add(_v.set(this.vel.x * 0.08, 0, this.vel.z * 0.08));

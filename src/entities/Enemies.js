@@ -9,6 +9,9 @@ const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vecto
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3();
 const Y = new THREE.Vector3(0, 1, 0), DOWN = new THREE.Vector3(0, -1, 0);
 const _c = new THREE.Color();
+const _footTmp = new THREE.Vector3();
+const _toast = new THREE.Color();
+const _burnt = new THREE.Color(0x3a1a0e);
 
 // ---------------------------------------------------------------------------------
 class EnemyAI {
@@ -97,6 +100,8 @@ class EnemyAI {
     const faceYaw = Math.atan2(dx, dz);
     const speed = c.def.speed * c.speedMul * (game.sim.depthAt(c.pos.x, c.pos.z) > 0.4 ? 0.75 : 1);
 
+    if (c.def.boss) this._bossAbilities(c, dt);
+
     // lobsters carry their catch then hurl it
     if (c.grabbed) {
       c.grabT = (c.grabT || 0) + dt;
@@ -151,10 +156,87 @@ class EnemyAI {
     }
   }
 
+  _bossAbilities(c, dt) {
+    const game = this.game;
+    c.stompT = (c.stompT ?? 6) - dt;
+    // reinforcements as he weakens
+    const f = c.hp / c.maxHp;
+    c.summoned = c.summoned || 0;
+    if ((f < 0.66 && c.summoned < 1) || (f < 0.33 && c.summoned < 2)) {
+      c.summoned++;
+      c.state = 'warcry';
+      c.stateT = 0;
+      c.shout = 1.5;
+      game.events.emit('crabWarcry', c);
+      game.events.emit('bossSummon', c);
+      for (let i = 0; i < 4 + game.director.wave / 5; i++) {
+        const x = clamp(c.pos.x + rnd(-10, 10), -44, 44);
+        let z = -14;
+        for (let zz = -2; zz > -34; zz -= 0.4) if (game.sim.depthAt(x, zz) > 0.45) { z = zz; break; }
+        game.enemyManager.spawn(Math.random() < 0.5 ? 'forker' : 'knifer', x, z, { emerge: true });
+      }
+    }
+    if (c.stompT > 0 || c.attackT >= 0) return;
+    // stomp when there is something worth stomping close by
+    let near = 0;
+    game.spatial.query(c.pos.x, c.pos.z, 6, (o) => { if (o.kind === 'unit' && o.alive) near++; });
+    const bnear = game.buildings.list.some((b) => b.alive && Math.hypot(b.pos.x - c.pos.x, b.pos.z - c.pos.z) < b.radius + 5);
+    if (near >= 2 || bnear) {
+      c.stompT = rnd(7, 10);
+      c.stomping = 0.9;
+      c.shout = 1;
+      game.events.emit('bossWindup', c);
+    }
+  }
+
+  _stomp(c) {
+    const game = this.game, sim = game.sim;
+    const R = 6.5;
+    const cx = c.pos.x, cz = c.pos.z;
+    for (const u of game.units) {
+      if (!u.alive || !u.p.length || u.hidden) continue;
+      const dx = u.pos.x - cx, dz = u.pos.z - cz;
+      const d = Math.hypot(dx, dz);
+      if (d > R) continue;
+      const f = 1 - d / R;
+      u.hit(16 * f + 3, (dx / (d || 1)) * 10 * f, 6 * f + 2, (dz / (d || 1)) * 10 * f, { knock: true, sever: f > 0.6 });
+    }
+    for (const b of game.buildings.list) {
+      if (!b.alive) continue;
+      const d = Math.hypot(b.pos.x - cx, b.pos.z - cz) - b.radius;
+      if (d < R) b.damage(60 * (1 - Math.max(0, d) / R), 'crab', new THREE.Vector3(b.pos.x, b.baseY + 0.5, b.pos.z));
+    }
+    const res = sim.dig(cx, cz, 2.6, 0.35);
+    game.particles.sandSpray(cx, sim.heightAt(cx, cz) + 0.2, cz, 0, 0, 60, res.vol, res.wet, 2.0);
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      game.particles.dust(cx + Math.cos(a) * 2.5, sim.heightAt(cx, cz) + 0.2, cz + Math.sin(a) * 2.5, 1, 1.2);
+    }
+    if (sim.depthAt(cx, cz) > 0.1) game.particles.splash(cx, sim.surfaceAt(cx, cz), cz, 40, 2.2);
+    game.rig.addShake(0.8);
+    game.events.emit('bossStomp', c);
+  }
+
   _strike(c, t, nx, nz) {
     const game = this.game;
     const dmg = c.def.dmg * c.dmgMul;
     const knock = c.def.knock || 5;
+    if (c.def.boss) {
+      // a sweeping trident: everything in the arc in front gets it
+      const fx = Math.sin(c.yaw), fz = Math.cos(c.yaw);
+      const reach = c.def.range * 1.15;
+      for (const u of game.units) {
+        if (!u.alive || !u.p.length || u.hidden) continue;
+        const dx = u.pos.x - c.pos.x, dz = u.pos.z - c.pos.z;
+        const d = Math.hypot(dx, dz);
+        if (d > reach || (dx * fx + dz * fz) / (d || 1) < -0.1) continue;
+        u.hit(dmg * 0.8, (dx / (d || 1)) * knock + fx * 3, knock * 0.6 + 2, (dz / (d || 1)) * knock + fz * 3, { source: c, sever: true });
+      }
+      if (t.kind === 'building') t.damage(dmg * (c.def.siege || 1), 'crab', _v.set(c.pos.x + fx * reach * 0.8, t.baseY + 1, c.pos.z + fz * reach * 0.8));
+      game.rig.addShake(0.3);
+      game.events.emit('crabStrike', c, t);
+      return;
+    }
     if (t.kind === 'building') {
       const p = _v.set(c.pos.x + nx * c.radius * 1.6, t.baseY + Math.min(t.height * 0.4, 1.2), c.pos.z + nz * c.radius * 1.6);
       t.damage(dmg * (c.def.siege || 1), 'crab', p);
@@ -357,8 +439,8 @@ export class Enemies {
     const f = c.frame(this._f);
     const s = c.size;
     c.updateLegs(dt, f, time);
-    const fl = c.flash;
-    const col = c.color;
+    const fl = c.flash * (c.def.boss ? 0.25 : 0.7);
+    const col = c.toasted ? _toast.copy(c.color).lerp(_burnt, c.toasted * 0.6) : c.color;
     const belly = _c.set(c.def.belly);
     // body
     _m.makeBasis(f.side, f.up, f.fwd);
@@ -446,8 +528,12 @@ export class Enemies {
       if (!c.legsOn[i]) continue;
       const h = LEG_HIPS[i];
       const hip = _v.copy(f.center).addScaledVector(f.side, h[0] * s).addScaledVector(f.up, h[1] * s).addScaledVector(f.fwd, h[2] * s);
-      const foot = c.legFeet[i];
       const a = 0.34 * s, b = 0.36 * s;
+      const foot = _footTmp.copy(c.legFeet[i]);
+      // never let a leg stretch beyond its reach
+      const dd = _v2.subVectors(foot, hip);
+      const reach = (a + b) * 0.98;
+      if (dd.length() > reach) foot.copy(hip).addScaledVector(dd.normalize(), reach);
       const d = _v2.subVectors(foot, hip);
       let dl = d.length();
       const dir = d.divideScalar(dl || 1);

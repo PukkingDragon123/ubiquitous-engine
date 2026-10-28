@@ -151,6 +151,20 @@ export class CameraRig {
     // keep the camera above sand and water
     const minY = Math.max(this.sim.heightAt(this.camPos.x, this.camPos.z), this.sim.seaLevel + 0.15) + (this.mode === 'follow' ? 0.35 : 0.8);
     if (this.camPos.y < minY) this.camPos.y = minY;
+    // never inside buildings: rise over them
+    if (this.buildings && this.mode !== 'cinematic') {
+      for (const b of this.buildings.list) {
+        if (!b.alive) continue;
+        const dx = this.camPos.x - b.pos.x, dz = this.camPos.z - b.pos.z;
+        const r = b.radius + 0.6;
+        const d = Math.hypot(dx, dz);
+        if (d < r) {
+          const top = b.baseY + b.height * Math.max(0.3, b.progress) + 0.8;
+          const k = 1 - d / r;
+          if (this.camPos.y < top) this.camPos.y += (top - this.camPos.y) * Math.min(1, k * 3);
+        }
+      }
+    }
 
     // blend between modes
     if (this._blend < 1) {

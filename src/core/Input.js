@@ -9,7 +9,7 @@ export class Input {
     this.keys = Object.create(null);
     this.pressed = new Set(); // keys pressed this frame
     this.mouse = new THREE.Vector2(); // pixels
-    this.ndc = new THREE.Vector2();
+    this.ndc = new THREE.Vector2(-10, -10); // off-screen until the mouse moves
     this.buttons = 0;
     this.handlers = [];
     this.locked = false;

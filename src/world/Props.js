@@ -177,8 +177,12 @@ export class Props {
     this._applyObstacles();
   }
 
-  _inst(geo, mat, transforms, { cast = true, receive = true } = {}) {
+  _inst(geo, mat, transforms, { cast = true, receive = true, clearable = true } = {}) {
     const mesh = new THREE.InstancedMesh(geo, mat, Math.max(1, transforms.length));
+    if (clearable) {
+      this.clearables = this.clearables || [];
+      transforms.forEach((t, i) => { if ((t.s ?? 1) < 1.2) this.clearables.push({ mesh, i, x: t.x, z: t.z }); });
+    }
     mesh.count = transforms.length;
     transforms.forEach((t, i) => {
       _e.set(t.rx || 0, t.ry || 0, t.rz || 0);
@@ -195,6 +199,22 @@ export class Props {
     if (aSwayMissing(geo)) addSwayAttrs(geo);
     this.group.add(mesh);
     return mesh;
+  }
+
+  // Split far-away instances into angular sectors so whole sectors can be culled.
+  _instChunked(geo, mat, transforms, opts = {}, sectors = 8) {
+    const buckets = Array.from({ length: sectors }, () => []);
+    for (const t of transforms) {
+      const a = Math.atan2(t.z - 10, t.x) + Math.PI;
+      buckets[Math.min(sectors - 1, Math.floor((a / (Math.PI * 2)) * sectors))].push(t);
+    }
+    for (const b of buckets) {
+      if (!b.length) continue;
+      const m = this._inst(geo, mat, b, { ...opts, clearable: false });
+      m.computeBoundingSphere();
+      m.boundingSphere.radius += 3;
+      m.frustumCulled = true;
+    }
   }
 
   _rocks() {
@@ -228,14 +248,16 @@ export class Props {
     }
     // sparse beach rocks
     for (const [x, z, s] of [[16, -2, 1.3], [-22, 9, 1.6], [28, 14, 1.0], [-6, 22, 1.2], [6, -9, 0.9], [-30, 26, 2.2], [36, 30, 1.8]]) add(x, z, s);
-    // pebbles (small, plentiful)
-    for (let i = 0; i < 160; i++) {
-      const x = X0 + 4 + rng() * (X1 - X0 - 8), z = Z0 + 10 + rng() * (Z1 - Z0 - 14);
-      const v = Math.floor(rng() * variants.length);
-      const s = 0.08 + rng() * 0.18;
-      lists[v].push({ x, y: baseHeight(x, z) - s * 0.2, z, s, sy: s * 0.7, ry: rng() * 6 });
-    }
     this.rockMeshes = variants.map((g, i) => this._inst(g, this.rockMat, lists[i]));
+    // pebbles (small, plentiful, low poly)
+    const pebbleGeos = [0, 1, 2].map((i) => makeRockGeometry(200 + i, { detail: 1, flat: 0.6 + rng() * 0.2 }));
+    const pl = pebbleGeos.map(() => []);
+    for (let i = 0; i < 170; i++) {
+      const x = X0 + 4 + rng() * (X1 - X0 - 8), z = Z0 + 10 + rng() * (Z1 - Z0 - 14);
+      const s = 0.08 + rng() * 0.18;
+      pl[i % 3].push({ x, y: baseHeight(x, z) - s * 0.2, z, s, sy: s * 0.7, ry: rng() * 6 });
+    }
+    pebbleGeos.forEach((g, i) => this._inst(g, this.rockMat, pl[i]));
   }
 
   _vegetation() {
@@ -243,10 +265,12 @@ export class Props {
     const sim = this.sim;
     const grassVariants = [0, 1, 2].map((i) => makeGrassClump(10 + i, { blades: 12 + i * 2, height: 0.75 + i * 0.25 }));
     const grassSim = grassVariants.map(() => []);
-    const grassOuter = grassVariants.map(() => []);
+    const grassOuter = [[], [], [], [], []];
     const bushVariants = [0, 1, 2].map((i) => makeBush(30 + i, { size: 1, flowers: i !== 1 }));
+    const farGrass = [0, 1].map((i) => makeGrassClump(20 + i, { blades: 6, height: 0.9 + i * 0.25 }));
+    const farBush = [0, 1].map((i) => makeBush(40 + i, { size: 1, flowers: i === 0, leaves: 26, seg: 5 }));
     const bushSim = bushVariants.map(() => []);
-    const bushOuter = bushVariants.map(() => []);
+    const bushOuter = [[], [], [], [], []];
 
     const elevAt = (x, z) => baseHeight(x, z) - SEA_LEVEL;
     const blocked = (x, z, r) => this.colliders.some((c) => (c.x - x) ** 2 + (c.z - z) ** 2 < (c.r + r) ** 2);
@@ -263,7 +287,7 @@ export class Props {
       grassSim[v].push({ x, y: sim.heightAt(x, z), z, s, ry: rng() * 6.28 });
     }
     // grass + bushes beyond the play area (backdrop)
-    for (let i = 0; i < 9000; i++) {
+    for (let i = 0; i < 6500; i++) {
       const a = rng() * Math.PI * 2;
       const d = 30 + Math.pow(rng(), 1.6) * 240;
       const x = Math.cos(a) * d * 1.4, z = Math.sin(a) * d + 20;
@@ -274,10 +298,10 @@ export class Props {
       if (rng() > dens) continue;
       const far = smoothstep(60, 200, d);
       if (rng() < 0.82) {
-        const v = Math.floor(rng() * 3);
+        const v = d < 70 ? Math.floor(rng() * 3) : 3 + Math.floor(rng() * 2);
         grassOuter[v].push({ x, y: baseHeight(x, z), z, s: (1 + rng() * 0.8) * (1 + far * 1.6), ry: rng() * 6.28 });
       } else {
-        const v = Math.floor(rng() * 3);
+        const v = d < 70 ? Math.floor(rng() * 3) : 3 + Math.floor(rng() * 2);
         bushOuter[v].push({ x, y: baseHeight(x, z) - 0.1, z, s: (0.8 + rng() * 1.2) * (1 + far * 1.2), ry: rng() * 6.28 });
       }
     }
@@ -293,9 +317,9 @@ export class Props {
       this.colliders.push({ x, z, r: 0.6, h: 1, kind: 'bush' });
     }
     this.grassMeshes = grassVariants.map((g, i) => this._inst(g, this.grassMat, grassSim[i], { cast: false }));
-    grassVariants.forEach((g, i) => this._inst(g, this.staticGrassMat, grassOuter[i], { cast: false }));
+    [...grassVariants, ...farGrass].forEach((g, i) => this._instChunked(g, this.staticGrassMat, grassOuter[i], { cast: false }));
     bushVariants.forEach((g, i) => this._inst(g, this.bushMat, bushSim[i], { cast: true }));
-    bushVariants.forEach((g, i) => this._inst(g, this.staticBushMat, bushOuter[i], { cast: false }));
+    [...bushVariants, ...farBush].forEach((g, i) => this._instChunked(g, this.staticBushMat, bushOuter[i], { cast: false }));
 
     // palms
     const palmVariants = [0, 1, 2].map((i) => makePalm(50 + i, { height: 8 + i * 1.6 }));
@@ -431,6 +455,21 @@ export class Props {
         }
       }
     }
+  }
+
+  // Hide small decorative props (pebbles, shells, grass) inside a circle.
+  clearArea(x, z, r) {
+    const zero = new THREE.Matrix4().makeScale(0, 0, 0);
+    const touched = new Set();
+    for (const c of this.clearables || []) {
+      if (c.cleared) continue;
+      if ((c.x - x) ** 2 + (c.z - z) ** 2 < r * r) {
+        c.mesh.setMatrixAt(c.i, zero);
+        c.cleared = true;
+        touched.add(c.mesh);
+      }
+    }
+    for (const m of touched) m.instanceMatrix.needsUpdate = true;
   }
 
   nearestCollider(x, z, r = 0) {
