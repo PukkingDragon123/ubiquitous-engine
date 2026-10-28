@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Crab, CRAB_TYPES, LEG_HIPS, mkFrame } from './Crab.js';
 import { InstancedLayer } from './InstancedLayer.js';
+import { Kraken } from './Kraken.js';
 import { clamp, damp, rnd, pick, smoothstep, lerp } from '../core/math.js';
 
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3();
@@ -299,7 +300,7 @@ export class Enemies {
   }
 
   spawn(type, x, z, opts = {}) {
-    const c = new Crab(this.game, type, x, z, opts);
+    const c = type === 'kraken' ? new Kraken(this.game, x, z, opts) : new Crab(this.game, type, x, z, opts);
     this.game.enemies.push(c);
     this.game.events.emit('enemySpawned', c);
     return c;
@@ -412,6 +413,7 @@ export class Enemies {
     for (const k in L) L[k].begin();
     const dt = 1 / 60;
     for (const c of this.game.enemies) {
+      if (c.render) { c.render(time); continue; }
       if (!c.p.length) continue;
       this._crab(c, dt, time);
     }

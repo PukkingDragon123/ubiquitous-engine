@@ -197,6 +197,25 @@ export class BeachSim {
     });
   }
 
+  // Shove the water locally: a bump (amount > 0) or a dimple (< 0) that
+  // spreads out as real ripples. Tentacle slaps, things bursting out of the sea.
+  splashWater(x, z, radius, amount) {
+    const { W, H, d } = this;
+    const cs = this.cs;
+    const i0 = Math.max(2, Math.floor((x - radius - X0) / cs)), i1 = Math.min(W - 3, Math.ceil((x + radius - X0) / cs));
+    const j0 = Math.max(2, Math.floor((z - radius - Z0) / cs)), j1 = Math.min(H - 3, Math.ceil((z + radius - Z0) / cs));
+    for (let j = j0; j <= j1; j++) {
+      for (let i = i0; i <= i1; i++) {
+        const k = j * W + i;
+        if (d[k] < 0.03) continue;
+        const dx = X0 + i * cs - x, dz = Z0 + j * cs - z;
+        const r2 = (dx * dx + dz * dz) / (radius * radius);
+        if (r2 >= 1) continue;
+        d[k] = Math.max(0, d[k] + amount * (1 - r2) * (1 - r2));
+      }
+    }
+  }
+
   // ---- main update ------------------------------------------------------------
   update(dt) {
     dt = Math.min(dt, 0.05);

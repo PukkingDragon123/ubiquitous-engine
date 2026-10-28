@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { rnd, clamp, smoothstep } from '../core/math.js';
 
 const _v = new THREE.Vector3();
+const onShore = (e) => !e.offshore;
 
 export class CombatAI {
   constructor(game) {
@@ -97,7 +98,7 @@ export class CombatAI {
     const game = this.game;
     if (game.state !== 'play') return;
     // defend himself when crabs reach him, then sit back down
-    const e = this._nearestEnemy(u.pos.x, u.pos.z, 2.2);
+    const e = this._nearestEnemy(u.pos.x, u.pos.z, 2.2, onShore);
     const throne = game.keep && game.keep.alive ? game.keep.slot('throne') : null;
     if (e) {
       if (u.sit) {
@@ -132,7 +133,7 @@ export class CombatAI {
     const aggro = u.def.ranged ? range + 2 : 7.5;
     // keep the current target if still valid
     if (!u.target || !u.target.alive || Math.hypot(u.target.pos.x - u.pos.x, u.target.pos.z - u.pos.z) > aggro + 3) {
-      u.target = this._nearestEnemy(u.pos.x, u.pos.z, aggro);
+      u.target = this._nearestEnemy(u.pos.x, u.pos.z, aggro, u.def.ranged ? null : onShore);
     }
     const o = u.order;
     if (o && o.type === 'move') {
@@ -160,7 +161,7 @@ export class CombatAI {
         const a = rnd(-1.2, 1.2);
         u.guard = { x: keep.pos.x + Math.sin(a) * (keep.radius + 3.5), z: keep.pos.z - Math.cos(a) * (keep.radius + 3.5) };
       }
-      const fight = this._nearestEnemy(keep.pos.x, keep.pos.z, 22);
+      const fight = this._nearestEnemy(keep.pos.x, keep.pos.z, 22, u.def.ranged ? null : onShore);
       if (fight) { u.moveTo(fight.pos.x, fight.pos.z, range * 0.8); return; }
       if (Math.hypot(u.guard.x - u.pos.x, u.guard.z - u.pos.z) > 1.2) u.moveTo(u.guard.x, u.guard.z, 0.6);
       else { u.lookAt = _v.set(u.pos.x, 0, u.pos.z - 5).clone(); u.setAnim('idle'); }

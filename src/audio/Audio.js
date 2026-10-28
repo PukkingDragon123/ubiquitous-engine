@@ -629,6 +629,42 @@ export class Audio {
     ev.on('bossWindup', (c) => this.babble(c.pos, 'grrrooaa', { pitch: 60, crab: true, vol: 0.18, speed: 0.6, shout: true }));
     ev.on('bossStomp', (c) => { this.tone(c.pos, { freq: 70, to: 25, dur: 1.2, vol: 0.6 }); this.noise(c.pos, { dur: 1.4, freq: 600, sweepTo: 80, q: 0.5, vol: 0.55, buf: 'brown', verb: 0.4 }); });
     ev.on('bossSummon', (c) => { this.horn(); });
+    // the Kraken
+    ev.on('krakenBreach', (k) => {
+      this.noise(k.pos, { dur: 1.6, freq: 1400, sweepTo: 200, q: 0.5, vol: 0.6, buf: 'pink', verb: 0.3 });
+      this.tone(k.pos, { freq: 55, to: 30, dur: 1.8, vol: 0.5 });
+    });
+    ev.on('krakenRoar', (k) => {
+      this.babble(k.pos, 'grrrooooaaargh', { pitch: 46, crab: true, vol: 0.3, speed: 0.45, shout: true });
+      this.tone(k.pos, { freq: 62, to: 34, dur: 1.8, type: 'sawtooth', vol: 0.22, verb: 0.5 });
+      this.noise(k.pos, { dur: 1.6, freq: 260, sweepTo: 90, q: 0.8, vol: 0.4, buf: 'brown', attack: 0.15 });
+    });
+    ev.on('tentacleSlam', (a, p) => {
+      this.tone(p, { freq: 85, to: 28, dur: 0.6, vol: 0.65 });
+      this.noise(p, { dur: 0.55, freq: 520, sweepTo: 110, q: 0.6, vol: 0.6, buf: 'brown', verb: 0.25 });
+      this.noise(p, { dur: 0.12, freq: 1800, q: 1.5, vol: 0.25, buf: 'pink' });
+    });
+    ev.on('tentacleSweep', (a) => this.noise(a.pos.lengthSq() ? a.pos : a.arm.tip, { dur: 1.1, freq: 260, sweepTo: 1500, q: 0.7, vol: 0.4, buf: 'pink', attack: 0.3 }));
+    ev.on('tentacleGrab', (a, u) => {
+      this.noise(u.pos, { dur: 0.3, freq: 800, sweepTo: 260, q: 3, vol: 0.35, buf: 'pink' });
+      this.babble(u.pos, pick(['AAAAH', 'not the arm!', 'put me DOWN']), { pitch: 780, vol: 0.16, speed: 0.8, shout: true });
+    });
+    ev.on('krakenSever', (a, p) => {
+      this.noise(p, { dur: 0.4, freq: 900, sweepTo: 180, q: 4, vol: 0.5, buf: 'pink' });
+      this.tone(p, { freq: 620, to: 140, dur: 0.45, type: 'square', vol: 0.07 });
+      this.babble(a.arm.kr.pos, 'OOOWWWW', { pitch: 64, crab: true, vol: 0.28, speed: 0.6, shout: true });
+    });
+    ev.on('krakenGulp', (k) => {
+      this.tone(k.pos, { freq: 140, to: 45, dur: 0.4, vol: 0.45 });
+      setTimeout(() => this.babble(k.pos, 'buuurp', { pitch: 52, crab: true, vol: 0.25, speed: 0.5 }), 700);
+    });
+    ev.on('krakenWave', () => this.crash(1.6));
+    ev.on('krakenDive', (k) => this.noise(k.pos, { dur: 1.2, freq: 1100, sweepTo: 160, q: 0.6, vol: 0.5, buf: 'pink' }));
+    ev.on('krakenDying', (k) => {
+      this.babble(k.pos, 'noooooo blub blub', { pitch: 50, crab: true, vol: 0.3, speed: 0.4, shout: true });
+      this.tone(k.pos, { freq: 90, to: 22, dur: 4, type: 'sawtooth', vol: 0.18, verb: 0.6 });
+    });
+    ev.on('krakenHoard', (k, m) => { for (let i = 0; i < 6; i++) setTimeout(() => this.fm(m, { freq: 1800 + i * 240, ratio: 2.4, index: 500, dur: 0.25, vol: 0.06 }), i * 70); });
     ev.on('title', (t, opts) => { if (!opts.danger) this.tone(null, { freq: 523, dur: 0.6, type: 'triangle', vol: 0.05, verb: 0.5 }); });
   }
 

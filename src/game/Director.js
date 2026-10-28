@@ -132,7 +132,7 @@ export class Director {
 
   _composition(n) {
     const groups = [];
-    const boss = n % 5 === 0;
+    const boss = n % 5 === 0 || (this.game.params.has('boss') && n === 1);
     const count = Math.round(2.5 + n * 1.8 + (n > 6 ? (n - 6) * 1.5 : 0));
     const pool = ['forker'];
     if (n >= 2) pool.push('knifer', 'forker');
@@ -153,7 +153,11 @@ export class Director {
       groups.push({ t, types: list.splice(0, size), x, hpMul });
       t += rnd(4, 8) - Math.min(3, n * 0.2);
     }
-    if (boss) groups.splice(Math.min(2, groups.length), 0, { t: 12, types: ['kingcrab'], x: 0, hpMul: 1 + (n / 5 - 1) * 0.6, boss: true });
+    if (boss) {
+      const forced = this.game.params.get('boss');
+      const type = forced === 'kraken' || forced === 'kingcrab' ? forced : n % 10 === 0 ? 'kraken' : 'kingcrab';
+      groups.splice(Math.min(2, groups.length), 0, { t: 12, types: [type], x: 0, hpMul: 1 + (n / 5 - 1) * 0.6, boss: true });
+    }
     return groups;
   }
 
@@ -161,7 +165,7 @@ export class Director {
     const game = this.game, sim = game.sim;
     for (let i = 0; i < g.types.length; i++) {
       const type = g.types[i];
-      const big = CRAB_TYPES[type].boss;
+      const big = type === 'kraken' || CRAB_TYPES[type].boss;
       const x = clamp(g.x + rnd(-3, 3) + i * 0.8, -44, 44);
       // find water of suitable depth
       let z = -14;
@@ -193,7 +197,8 @@ export class Director {
       game.slowmo = 2.2;
       this.bossAlive = null;
     }
-    const alive = game.enemies.some((e) => e.alive);
+    // a dying kraken still has its big moment before the tide turns
+    const alive = game.enemies.some((e) => e.alive || (e.type === 'kraken' && !e.disposed));
     if (!this.spawnQueue.length && !alive && this.timer > 6) this._beginReceding();
     // don't let stragglers drag on forever: after a long battle the tide starts to fall anyway
     if (this.timer > 150 && !this.spawnQueue.length) game.sim.targetSeaLevel = 0.2;

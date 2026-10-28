@@ -1,9 +1,12 @@
 // Painterly sky dome, sun/moon lighting, fog, environment map and the day cycle.
 import * as THREE from 'three';
 import { globalUniforms, NOISE_GLSL } from './shaderLib.js';
-import { clamp, smoothstep, lerp } from '../core/math.js';
+import { clamp, smoothstep, lerp, damp } from '../core/math.js';
 
 const col = (hex) => new THREE.Color(hex);
+
+// A brewing storm the sky leans toward while something huge is in the water.
+const STORM = { zen: col(0x2c3846), hor: col(0x6d7a80), sun: col(0xbfc8cc), fog: col(0x7c878a) };
 
 // Palette keyframes by sun elevation (sin of altitude).
 const KEYS = [
@@ -40,6 +43,10 @@ export class Sky {
     this.timeOfDay = 0.34; // 0..1 (0.25 sunrise, 0.5 noon, 0.75 sunset)
     this.timeScale = 1;
     this.frozen = false;
+    this.gloom = 0;
+    this.gloomTarget = 0;
+    this._lastEnvGloom = 0;
+    this.baseCloud = globalUniforms.uCloudCover.value;
     this.pal = { zen: new THREE.Color(), hor: new THREE.Color(), sun: new THREE.Color(), fog: new THREE.Color(), sunI: 3, hemi: 1 };
 
     this.uniforms = {
@@ -174,6 +181,17 @@ export class Sky {
     globalUniforms.uNight.value = night;
 
     const pal = samplePalette(elev, this.pal);
+    this.gloom = damp(this.gloom, this.gloomTarget, 0.45, dt);
+    if (this.gloom > 0.002) {
+      const g = this.gloom;
+      pal.zen.lerp(STORM.zen, g * 0.7);
+      pal.hor.lerp(STORM.hor, g * 0.65);
+      pal.fog.lerp(STORM.fog, g * 0.6);
+      pal.sun.lerp(STORM.sun, g * 0.5);
+      pal.sunI *= 1 - 0.5 * g;
+      pal.hemi *= 1 - 0.2 * g;
+    }
+    globalUniforms.uCloudCover.value = lerp(this.baseCloud, 0.9, this.gloom);
     this.uniforms.uZenith.value.copy(pal.zen);
     this.uniforms.uHorizon.value.copy(pal.hor);
     globalUniforms.uSunColor.value.copy(pal.sun);
@@ -203,9 +221,10 @@ export class Sky {
 
     // refresh reflections when the light changed enough
     this._envTimer -= dt;
-    if (force || (this._envTimer <= 0 && Math.abs(elev - this._lastEnvElev) > 0.012)) {
+    if (force || (this._envTimer <= 0 && (Math.abs(elev - this._lastEnvElev) > 0.012 || Math.abs(this.gloom - this._lastEnvGloom) > 0.04))) {
       this._envTimer = 1.5;
       this._lastEnvElev = elev;
+      this._lastEnvGloom = this.gloom;
       this.refreshEnvironment();
     }
   }

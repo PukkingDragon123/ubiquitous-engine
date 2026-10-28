@@ -62,7 +62,11 @@ export class Tutorial {
     ev.on('waveCleared', (n) => {
       setTimeout(() => this.king(n === 1 ? 'We survived! The sea leaves gifts behind — look for bottles with blueprints!' : pick(['Ha! Back to the sea with you!', 'Victory! Someone fix my castle.', 'I knew we would win. I was never worried. At all.'])), 2500);
     });
-    ev.on('bossArrive', () => setTimeout(() => this.king('That… is a VERY large crab. And that is a VERY large fork.', { duration: 4 }), 2500));
+    ev.on('bossArrive', (c) => setTimeout(() => {
+      if (c.type === 'kraken') this.king('An octopus. In a HAT. Hack at its arms when they slap the sand — archers, aim for the head!', { duration: 5 });
+      else this.king('That… is a VERY large crab. And that is a VERY large fork.', { duration: 4 });
+    }, 3200));
+    ev.on('krakenSever', () => { if (!this._calamari) { this._calamari = true; setTimeout(() => this.king('HA! Calamari for everyone!', { shout: true, duration: 2.5 }), 900); } });
     ev.on('kingStands', () => this.king(pick(['Unhand my kingdom, you crustacean!', 'Have at thee!', 'Royal scepter, ACTIVATE!']), { shout: true, duration: 2 }));
     ev.on('blueprintUnlocked', (bp) => setTimeout(() => this.king('A new blueprint! Open the bottles to build it.'), 3200));
     ev.on('grab', (o) => {

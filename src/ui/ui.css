@@ -251,6 +251,7 @@
 .bubble.small { font-size: 15px; padding: 3px 9px; border-radius: 12px; }
 .bubble.small::after { width: 10px; height: 10px; bottom: -5px; }
 .bubble.out { animation: bubbleOut 0.3s ease forwards; }
+.bubble .w, .title-card .w { display: inline-block; white-space: nowrap; }
 .bubble .ch { display: inline-block; opacity: 0; animation: chIn 0.25s cubic-bezier(.3,1.8,.5,1) forwards; white-space: pre; }
 @keyframes bubbleIn { 0% { transform: translateX(-50%) scale(0.3); opacity: 0; } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
 @keyframes bubbleOut { to { transform: translateX(-50%) scale(0.6) translateY(10px); opacity: 0; } }

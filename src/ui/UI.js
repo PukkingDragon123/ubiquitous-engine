@@ -25,6 +25,22 @@ const TOOL_DEFS = [
   { id: 'horn', key: '6', tip: 'War horn — send troops' },
 ];
 
+// Letters that pop in one by one, grouped per word so lines only break between words.
+function popLetters(parent, text, speed) {
+  let n = 0;
+  for (const part of text.split(/(\s+)/)) {
+    if (!part) continue;
+    const word = h('span', /\s/.test(part) ? 'sp' : 'w');
+    for (const c of part) {
+      const s = h('span', 'ch');
+      s.textContent = c;
+      s.style.animationDelay = `${n++ * speed}s`;
+      word.appendChild(s);
+    }
+    parent.appendChild(word);
+  }
+}
+
 export class UI {
   constructor(game) {
     this.game = game;
@@ -258,7 +274,7 @@ export class UI {
     const tide = this.tide;
     if (d.phase === 'battle') {
       tide.classList.add('battle');
-      const n = this.game.enemies.filter((e) => e.alive).length + d.spawnQueue.reduce((a, g) => a + g.types.length, 0);
+      const n = this.game.enemies.filter((e) => e.alive && e.type !== 'krakenArm').length + d.spawnQueue.reduce((a, g) => a + g.types.length, 0);
       tide.innerHTML = `<i>${ICONS.crab}</i><span>Wave <b>${d.wave}</b> · <b>${n}</b> left</span>`;
     } else {
       tide.classList.remove('battle');
@@ -567,12 +583,7 @@ export class UI {
     const body = h('span', 'txt');
     const chars = [...text];
     const speed = opts.speed || (opts.shout ? 0.045 : 0.028);
-    chars.forEach((c, i) => {
-      const s = h('span', 'ch');
-      s.textContent = c;
-      s.style.animationDelay = `${i * speed}s`;
-      body.appendChild(s);
-    });
+    popLetters(body, text, speed);
     el.appendChild(body);
     const dur = opts.duration ?? Math.max(2.2, chars.length * 0.065 + 1.6);
     const head = new THREE.Vector3();
@@ -592,12 +603,7 @@ export class UI {
     if (this._title) { const old = this._title; old.classList.add('out'); setTimeout(() => old.remove(), 700); }
     const card = h('div', 'title-card' + (opts.danger ? ' danger' : '') + (opts.boss ? ' boss' : ''));
     const t = h('div', 't');
-    [...text].forEach((c, i) => {
-      const s = h('span', 'ch');
-      s.textContent = c;
-      s.style.animationDelay = `${i * 0.04}s`;
-      t.appendChild(s);
-    });
+    popLetters(t, text, 0.04);
     card.appendChild(t);
     if (sub) card.appendChild(h('div', 's', sub));
     this.titles.appendChild(card);
