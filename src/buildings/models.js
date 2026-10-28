@@ -603,6 +603,45 @@ export function bucketModel() {
   return b.build();
 }
 
+// A round basin of packed wet sand with a driftwood sluice facing +z. The water
+// surface and the sliding gate are animated by the building itself.
+export function reservoirModel() {
+  const b = new ModelBuilder(97);
+  const rng = b.rng;
+  b.height = 1.0;
+  b.add('sand', sandBox(3.3, 0.15, 3.3, 0.7));
+  const gap = 0.62;
+  // outside up, over the rim, inside down (so the faces point the right way)
+  const prof = [[1.56, 0.12], [1.48, 0.78], [1.38, 0.86], [1.2, 0.86], [1.12, 0.78], [1.12, 0.12]].map(([r, y]) => new THREE.Vector2(r, y));
+  b.add('sand', new THREE.LatheGeometry(prof, 30, gap / 2, Math.PI * 2 - gap));
+  // bucket ridges around the outside
+  for (const y of [0.32, 0.58]) {
+    const ridge = new THREE.TorusGeometry(1.52, 0.035, 5, 40, Math.PI * 2 - gap - 0.1);
+    ridge.rotateX(Math.PI / 2);
+    ridge.rotateY(-(Math.PI / 2 + gap / 2 + 0.05));
+    b.add('sand', b.at(ridge, 0, y, 0));
+  }
+  // sluice: two driftwood posts, a crossbar and a little spillway
+  for (const x of [-0.42, 0.42]) b.add('wood', b.at(stick(1.25, 0.06), x, 0.1, 1.33), 0xb79a72);
+  b.add('wood', b.at(plank(1.05, 0.1, 0.09), 0, 1.3, 1.33), 0xc9b08a);
+  b.add('sand', b.at(sandBox(0.72, 0.1, 0.9, 0.08), 0, 0.1, 1.8));
+  // a lever and a coil of seaweed rope
+  b.add('wood', b.at(stick(0.9, 0.03), 0.75, 0.15, 1.5, 0, 0, -0.5), 0x9a7a52);
+  const coil = new THREE.TorusGeometry(0.16, 0.05, 6, 14);
+  coil.rotateX(Math.PI / 2);
+  b.add('cloth', b.at(coil, -0.85, 0.2, 1.45), 0x5d8a3a);
+  // shells pressed into the rim
+  for (let i = 0; i < 16; i++) {
+    const a = gap / 2 + 0.15 + (i / 15) * (Math.PI * 2 - gap - 0.3);
+    shellAccent(b, 'shell', Math.sin(a) * 1.3, 0.88, Math.cos(a) * 1.3, a, 0.16 + rng() * 0.05, i % 3 ? 'scallop' : 'clam', [0xfbeee0, 0xf6c6a8, 0xf2a37c][i % 3], -Math.PI / 2);
+  }
+  b.circle(0, 0, 1.5, 0.86);
+  b.slots.gate = { x: 0, z: 2.05 };
+  b.slots.door = { x: 1.7, z: 1.3 };
+  b.slots.interior = { x: 0, y: 0.15, z: 0, r: 0.6 };
+  return b.build();
+}
+
 export function bucketStackGeometry(level) {
   const r = 0.62 * Math.pow(0.78, level);
   return prep(bucketTower(r, 0.8, { ridges: 2, merlons: 6, taper: 0.8 }));
@@ -623,4 +662,5 @@ export const MODEL_BUILDERS = {
   trap: trapModel,
   stable: stableModel,
   roost: roostModel,
+  reservoir: reservoirModel,
 };

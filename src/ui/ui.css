@@ -209,6 +209,7 @@
 .inspect .bar { height: 10px; border-radius: 6px; background: rgba(120, 80, 40, 0.15); overflow: hidden; margin: 4px 0 10px; }
 .inspect .bar span { display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, #e9b05a, #f6d48a); transition: width 0.3s; }
 .inspect .bar.hp span { background: linear-gradient(90deg, #7cc46a, #b4e08a); }
+.inspect .bar.water span { background: linear-gradient(90deg, #3aa6c4, #8fdcf0); }
 .inspect .bar.hp.low span { background: linear-gradient(90deg, #e2553f, #f2a26a); }
 .inspect .row { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-soft); }
 .inspect h4 { margin: 10px 0 4px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); }

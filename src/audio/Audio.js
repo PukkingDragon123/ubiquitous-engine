@@ -629,6 +629,10 @@ export class Audio {
     ev.on('bossWindup', (c) => this.babble(c.pos, 'grrrooaa', { pitch: 60, crab: true, vol: 0.18, speed: 0.6, shout: true }));
     ev.on('bossStomp', (c) => { this.tone(c.pos, { freq: 70, to: 25, dur: 1.2, vol: 0.6 }); this.noise(c.pos, { dur: 1.4, freq: 600, sweepTo: 80, q: 0.5, vol: 0.55, buf: 'brown', verb: 0.4 }); });
     ev.on('bossSummon', (c) => { this.horn(); });
+    ev.on('sluice', (b) => {
+      this.fm(b.pos, { freq: 180, ratio: 1.5, index: 120, dur: 0.5, vol: 0.12 });
+      this.noise(b.pos, { dur: 2.4, freq: 500, sweepTo: 1300, q: 0.5, vol: 0.45, buf: 'pink', attack: 0.15, verb: 0.2 });
+    });
     // the Kraken
     ev.on('krakenBreach', (k) => {
       this.noise(k.pos, { dur: 1.6, freq: 1400, sweepTo: 200, q: 0.5, vol: 0.6, buf: 'pink', verb: 0.3 });

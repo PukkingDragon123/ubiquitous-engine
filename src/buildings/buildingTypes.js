@@ -66,6 +66,11 @@ export const BUILDINGS = {
     desc: 'A tower of wet sand stamped with a bucket. Click it again to stack it higher.',
     size: 0.7, cost: {}, hp: 90, work: 1, unlocked: true, placeable: false, icon: '🪣',
   },
+  reservoir: {
+    name: 'Tide Reservoir', short: 'Reservoir',
+    desc: 'A shell-lined basin that fills with sea water. Open the sluice to send a flash flood down your trenches and wash the crabs away.',
+    size: 1.7, cost: { shells: 14, pebbles: 6, driftwood: 3 }, hp: 260, work: 12, reservoir: true, unlocked: false, icon: '💧',
+  },
   stable: {
     name: 'Seahorse Stable', short: 'Stable',
     desc: 'A stick corral with a shell trough. Trains Shell Riders on sand-sculpted seahorses.',
@@ -81,7 +86,7 @@ export const BUILDINGS = {
 };
 
 // Order in the blueprint bottle rack.
-export const BLUEPRINT_ORDER = ['camp', 'house', 'wall', 'tower', 'barracks', 'cannon', 'shelter', 'bridge', 'trap', 'catapult', 'stable', 'roost'];
+export const BLUEPRINT_ORDER = ['camp', 'house', 'wall', 'tower', 'barracks', 'cannon', 'shelter', 'bridge', 'trap', 'reservoir', 'catapult', 'stable', 'roost'];
 
 export const RES_INFO = {
   shells: { label: 'Shells', icon: 'shell' },

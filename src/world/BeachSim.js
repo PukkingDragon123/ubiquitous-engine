@@ -216,6 +216,33 @@ export class BeachSim {
     }
   }
 
+  // Pour a volume of water onto a soft disc, already flowing at (vx, vz).
+  pour(x, z, radius, vol, vx = 0, vz = 0) {
+    const { W, H, d, fxp, fxn, fzp, fzn } = this;
+    const cs = this.cs, area = cs * cs;
+    const i0 = Math.max(2, Math.floor((x - radius - X0) / cs)), i1 = Math.min(W - 3, Math.ceil((x + radius - X0) / cs));
+    const j0 = Math.max(2, Math.floor((z - radius - Z0) / cs)), j1 = Math.min(H - 3, Math.ceil((z + radius - Z0) / cs));
+    let sum = 0;
+    for (let pass = 0; pass < 2; pass++) {
+      for (let j = j0; j <= j1; j++) {
+        for (let i = i0; i <= i1; i++) {
+          const dx = X0 + i * cs - x, dz = Z0 + j * cs - z;
+          const r2 = (dx * dx + dz * dz) / (radius * radius);
+          if (r2 >= 1) continue;
+          const w = (1 - r2) * (1 - r2);
+          if (pass === 0) { sum += w; continue; }
+          const k = j * W + i;
+          d[k] += (vol * w) / (sum * area);
+          const q = d[k] * cs;
+          if (vx > 0) fxp[k] = Math.max(fxp[k], q * vx); else fxn[k] = Math.max(fxn[k], -q * vx);
+          if (vz > 0) fzp[k] = Math.max(fzp[k], q * vz); else fzn[k] = Math.max(fzn[k], -q * vz);
+        }
+      }
+      if (!sum) return;
+    }
+    this.activateArea(x, z, radius + 2);
+  }
+
   // ---- main update ------------------------------------------------------------
   update(dt) {
     dt = Math.min(dt, 0.05);

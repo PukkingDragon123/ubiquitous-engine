@@ -465,7 +465,8 @@ export class UI {
     } else {
       const hp = b.hp / b.maxHp;
       html += `<div class="row"><span>Sturdiness</span><span data-k="hp">${Math.ceil(b.hp)} / ${b.maxHp}</span></div><div class="bar hp${hp < 0.35 ? ' low' : ''}"><span data-k="hpbar" style="width:${hp * 100}%"></span></div>`;
-      if (b.wet > 0.1) html += `<div class="row"><span>Soaked</span><span>${Math.round(b.wet * 100)}%</span></div>`;
+      if (b.wet > 0.1 && !def.reservoir) html += `<div class="row"><span>Soaked</span><span>${Math.round(b.wet * 100)}%</span></div>`;
+      if (def.reservoir) html += `<div class="row"><span>Sea water</span><span data-k="water">${Math.round(b.fill * 100)}%</span></div><div class="bar water"><span data-k="waterbar" style="width:${b.fill * 100}%"></span></div>`;
     }
     const residents = game.units.filter((u) => u.home === b && u.alive && !u.puppet);
     if (def.pop) {
@@ -480,6 +481,7 @@ export class UI {
         actions.push({ a: 'train:' + t, label: `Train ${ud.name}`, cost: ud.cost, ok: eco.canAfford(ud.cost) && eco.pop < eco.popCap });
       }
     }
+    if (b.state === 'built' && def.reservoir) actions.push({ a: 'sluice', label: b.flooding ? 'Whoosh!' : b.fill < 0.25 ? 'Filling up…' : 'Open the sluice!', cost: {}, ok: !b.flooding && b.fill >= 0.25 });
     if (b.state === 'built' && b.level < 3 && b.type !== 'bucket') actions.push({ a: 'upgrade', label: `Upgrade to level ${b.level + 1}`, cost: b.upgradeCost(), ok: eco.canAfford(b.upgradeCost()) });
     if (b.type === 'keep') {
       for (const [k, t] of Object.entries(TECHS)) {
@@ -509,6 +511,8 @@ export class UI {
     if (a.startsWith('train:')) {
       const r = b.train(a.slice(6));
       if (!r.ok) this.toast(r.reason, 'warn'); else this.toast(`Training a ${UNIT_TYPES[a.slice(6)].name}…`, 'good');
+    } else if (a === 'sluice') {
+      if (!b.openSluice()) this.toast(b.flooding ? 'Already flooding!' : 'Let it fill up a little more', 'warn');
     } else if (a === 'upgrade') {
       if (!b.upgrade()) this.toast('Not enough resources', 'warn');
     } else if (a.startsWith('tech:')) {
@@ -547,6 +551,13 @@ export class UI {
       if (b._wasSite) { b._wasSite = false; this._renderInspect(); return; }
       const hp = q('hp'); if (hp) hp.textContent = `${Math.ceil(b.hp)} / ${b.maxHp}`;
       const hb = q('hpbar'); if (hb) hb.style.width = (b.hp / b.maxHp) * 100 + '%';
+      if (b.def.reservoir) {
+        const w = q('water'); if (w) w.textContent = Math.round(b.fill * 100) + '%';
+        const wb = q('waterbar'); if (wb) wb.style.width = b.fill * 100 + '%';
+        const ready = !b.flooding && b.fill >= 0.25;
+        const btn = this.inspectEl.querySelector('[data-a="sluice"]');
+        if (btn && btn.classList.contains('disabled') === ready) this._renderInspect();
+      }
     }
     this._inspectT = (this._inspectT || 0) + 1;
     if (this._inspectT % 90 === 0) this._renderInspect();

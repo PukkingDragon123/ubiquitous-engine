@@ -151,6 +151,17 @@ export class Building {
       this.details.add(f);
     }
     this.details.add(this.liftGroup);
+    if (this.def.reservoir) {
+      this.fill = 0.2;
+      this.water = new THREE.Mesh(new THREE.CircleGeometry(1.14, 36), game.buildings.reservoirWater());
+      this.water.rotation.x = -Math.PI / 2;
+      this.water.receiveShadow = true;
+      this.details.add(this.water);
+      this.gate = new THREE.Mesh(prep(new THREE.BoxGeometry(0.78, 0.66, 0.07), 0xb8915f), mats.wood);
+      this.gate.position.set(0, 0.47, 1.33);
+      this.gate.castShadow = true;
+      this.details.add(this.gate);
+    }
     g.add(this.details);
     if (this.state !== 'built') {
       this.details.visible = false;
@@ -403,12 +414,66 @@ export class Building {
         game.events.emit('unitTrained', unit, this);
       }
     }
+    if (this.def.reservoir && this.state === 'built') this._reservoir(dt);
+  }
+
+  // ---- tide reservoir -----------------------------------------------------------------
+  get capacity() { return 9 * (1 + (this.level - 1) * 0.4); }
+
+  _reservoir(dt) {
+    const game = this.game, sim = game.sim;
+    // sea water seeps in whenever the tide reaches it; a trickle otherwise
+    const near = sim.sampleWaterAround(this.pos.x, this.pos.z, this.radius + 1.4);
+    const rate = (0.012 + (near.maxD > 0.04 ? 0.07 : 0)) * (1 + (this.level - 1) * 0.35);
+    if (!this.flooding) this.fill = Math.min(1, this.fill + rate * dt);
+    this.water.position.y = 0.16 + this.fill * 0.56;
+    this.water.visible = this.fill > 0.01;
+    this.gate.position.y = damp(this.gate.position.y, this.flooding && this.flooding.t < this.flooding.dur + 0.4 ? 1.05 : 0.47, 6, dt);
+    if (this.flooding) this._flood(dt);
+  }
+
+  openSluice() {
+    if (!this.def.reservoir || this.state !== 'built' || this.flooding || this.fill < 0.25) return false;
+    this.flooding = { t: 0, dur: 0.8 + this.fill * 1.5, vol: this.fill * this.capacity, from: this.fill, struck: new Map() };
+    this.game.events.emit('sluice', this);
+    return true;
+  }
+
+  _flood(dt) {
+    const f = this.flooding, game = this.game, sim = game.sim;
+    f.t += dt;
+    const g = this.slot('gate');
+    const dx = Math.sin(this.rot), dz = Math.cos(this.rot);
+    if (f.t < f.dur) {
+      // the basin empties through the gate as a torrent that is already moving
+      sim.pour(g.x, g.z, 0.85, (f.vol / f.dur) * dt, dx * 4.5, dz * 4.5);
+      this.fill = Math.max(0, f.from * (1 - f.t / f.dur));
+      if (Math.random() < 0.7) game.particles.splash(g.x, sim.surfaceAt(g.x, g.z) + 0.1, g.z, 3, 0.7);
+      if (Math.random() < 0.5) game.particles.foamBurst(g.x + dx * 0.6, sim.surfaceAt(g.x, g.z), g.z + dz * 0.6, 2, 0.8);
+    }
+    // anything with claws caught in the rush goes tumbling
+    if (f.t < f.dur + 3.5) {
+      for (const e of game.enemies) {
+        if (!e.alive || !e.p || !e.p.length || e.def.boss) continue;
+        if (Math.hypot(e.pos.x - this.pos.x, e.pos.z - this.pos.z) > 26) continue;
+        const k = sim.cellIndex(e.pos.x, e.pos.z);
+        if (k < 0 || sim.d[k] < 0.07) continue;
+        const vx = sim.vx[k], vz = sim.vz[k], sp = Math.hypot(vx, vz);
+        if (sp < 1.1) continue;
+        if (f.t - (f.struck.get(e) ?? -9) < 0.6) continue;
+        f.struck.set(e, f.t);
+        e.hit(4 + sp * 2.5, vx * 1.6, 2.5, vz * 1.6, { knock: true, water: true });
+        game.events.emit('swept', e);
+      }
+    } else {
+      this.flooding = null;
+    }
   }
 
   _checkWater(dt) {
     const sim = this.game.sim;
     const w = sim.sampleWaterAround(this.pos.x, this.pos.z, this.radius * 0.95 + 0.35);
-    if (w.maxD > 0.04 && !this.def.bridge) {
+    if (w.maxD > 0.04 && !this.def.bridge && !this.def.reservoir) {
       this.wet = Math.min(1, this.wet + w.maxD * 0.8 * dt * 4);
       const mortar = this.game.economy.tech.mortar ? 0.6 : 1;
       const dmg = (w.maxD * 1.6 + w.maxS * w.maxD * 3.2) * 10 * dt * mortar * (this.state === 'site' ? 1.5 : 1);
@@ -481,6 +546,26 @@ export class Buildings {
     this.ghostMat = makeGhostMaterial();
     this.placeGhostMat = makeGhostMaterial();
     game.bridges = [];
+  }
+
+  // Clear tide-pool water for reservoirs, with a slow ripple in the normals.
+  reservoirWater() {
+    if (this._resWater) return this._resWater;
+    const m = new THREE.MeshStandardMaterial({ color: 0x3aa6c4, roughness: 0.06, metalness: 0.05, transparent: true, opacity: 0.84 });
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.uTime = globalUniforms.uTime;
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vRip;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvRip = position.xy;');
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform float uTime;\nvarying vec2 vRip;')
+        .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+          float rr = length(vRip);
+          vec2 rp = vec2(sin(vRip.x * 7.0 + uTime * 1.8) + sin(rr * 11.0 - uTime * 2.6), cos(vRip.y * 6.0 - uTime * 1.5) + cos(rr * 9.0 - uTime * 2.1));
+          normal = normalize(normal + vec3(rp.x, rp.y, 0.0) * 0.06);
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.75, 0.95, 1.0), smoothstep(0.95, 1.14, rr) * 0.6);`);
+    };
+    m.customProgramCacheKey = () => 'reservoir-water';
+    this._resWater = m;
+    return m;
   }
 
   place(type, x, z, rot = 0, opts = {}) {

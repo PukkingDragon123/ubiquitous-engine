@@ -47,6 +47,10 @@ export class Tutorial {
         this._flag('campBuilt');
         this.king('A camp! Click it to train more workers. More hands, more castles!');
       }
+      if (b.type === 'reservoir' && !this.done.has('reservoirBuilt')) {
+        this._flag('reservoirBuilt');
+        this.king('Let the tide fill it, dig a trench toward the sea, then open the sluice. Crabs cannot swim UP a waterfall!', { duration: 5 });
+      }
       if (b.type === 'tower' && !this.done.has('towerBuilt')) {
         this._flag('towerBuilt');
         this.king('A tower! Archers will climb up and pelt the crabs. Train some there!');
