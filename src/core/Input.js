@@ -13,6 +13,7 @@ export class Input {
     this.buttons = 0;
     this.handlers = [];
     this.locked = false;
+    this.freeLook = false;
     this.lockDX = 0;
     this.lockDY = 0;
     this._ray = new THREE.Raycaster();
@@ -74,9 +75,10 @@ export class Input {
   }
 
   _move(e) {
-    if (this.locked) {
-      this.lockDX += e.movementX;
-      this.lockDY += e.movementY;
+    // mouse-look deltas; without pointer lock (e.g. in a sandboxed frame) plain movement still steers
+    if (this.locked || this.freeLook) {
+      this.lockDX += e.movementX || 0;
+      this.lockDY += e.movementY || 0;
     }
     const px = this.mouse.x, py = this.mouse.y;
     this._setMouse(e);

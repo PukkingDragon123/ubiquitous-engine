@@ -163,6 +163,17 @@ export class UI {
       this.selbox.classList.remove('hidden');
       Object.assign(this.selbox.style, { left: Math.min(b.x0, b.x1) + 'px', top: Math.min(b.y0, b.y1) + 'px', width: Math.abs(b.x1 - b.x0) + 'px', height: Math.abs(b.y1 - b.y0) + 'px' });
     });
+    ev.on('inspectStopwatch', (it) => {
+      // lean in over the dial and read it out
+      const rig = this.game.rig;
+      if (rig.mode !== 'rts' && rig.mode !== 'inspect') return;
+      this.closeInspect(true);
+      rig.goal.set(it.pos.x, it.pos.y + 0.2, it.pos.z);
+      rig.goalDist = 7;
+      rig.goalPitchOffset = 0.35;
+      const s = Math.max(0, Math.ceil(this.game.director.timeToRise));
+      this.toast(`The sea will rise in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`, 'warn');
+    });
     ev.on('warning', (secs) => {
       this.countdown.classList.add('on');
       this.title('THE SEA IS COMING', 'a stopwatch has washed ashore', { duration: 2.6, danger: true });
@@ -631,12 +642,7 @@ export class UI {
   shout(text, duration = 3) {
     const card = h('div', 'title-card shout-line');
     const t = h('div', 't');
-    [...text].forEach((c, i) => {
-      const s = h('span', 'ch');
-      s.textContent = c;
-      s.style.animationDelay = `${i * 0.035}s`;
-      t.appendChild(s);
-    });
+    popLetters(t, text, 0.035);
     card.appendChild(t);
     this.titles.appendChild(card);
     setTimeout(() => { card.classList.add('out'); setTimeout(() => card.remove(), 700); }, duration * 1000);

@@ -54,6 +54,7 @@ export class Possession {
     game.rig.followDist = 3.9;
     game.rig.setMode('follow', { blendSpeed: 1.8 });
     game.interaction.clearSelection();
+    game.input.freeLook = true;
     game.input.requestLock();
     game.events.emit('possessed', u);
   }
@@ -71,6 +72,7 @@ export class Possession {
       if (u.type === 'king' && u.alive) u.order = null;
     }
     this.unit = null;
+    game.input.freeLook = false;
     game.input.exitLock();
     game.rig.setMode('rts', { blendSpeed: 1.4 });
     if (u) { game.rig.goal.set(u.pos.x, u.pos.y, u.pos.z); game.rig.goalDist = Math.min(game.rig.goalDist, 22); }
