@@ -1,0 +1,100 @@
+@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/fredoka';
+@import '@fontsource/caveat/600.css';
+@import '@fontsource/caveat/700.css';
+
+:root {
+  --ink: #3b2a1c;
+  --ink-soft: #6b5340;
+  --paper: #fbf3e2;
+  --paper-2: #f3e5c8;
+  --sand: #e9cf9f;
+  --sea: #2cbccc;
+  --sea-deep: #0f78a8;
+  --coral: #ff7a6b;
+  --gold: #f2c14e;
+  --danger: #e2553f;
+  --shadow-soft: 0 2px 1px rgba(60, 35, 15, 0.12), 0 6px 18px rgba(60, 35, 15, 0.18);
+  --text-shadow: 0 1px 0 rgba(255, 250, 240, 0.35), 0 2px 3px rgba(40, 22, 8, 0.35), 0 8px 24px rgba(40, 22, 8, 0.25);
+  --display: 'Fraunces Variable', 'Fraunces', Georgia, serif;
+  --round: 'Fredoka Variable', 'Fredoka', 'Nunito', system-ui, sans-serif;
+  --hand: 'Caveat', 'Comic Sans MS', cursive;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #cfe7f3;
+  color: var(--ink);
+  font-family: var(--round);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+#app, #app canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  outline: none;
+}
+
+#ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+#loading {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at 50% 35%, #fdf6e6 0%, #f1dcb2 55%, #e2c08a 100%);
+  transition: opacity 1.2s ease, visibility 1.2s;
+}
+#loading.done { opacity: 0; visibility: hidden; }
+.loading-inner { text-align: center; }
+.loading-title {
+  font-family: var(--display);
+  font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 144;
+  font-weight: 800;
+  font-size: clamp(48px, 9vw, 120px);
+  letter-spacing: -0.02em;
+  color: #8a5a2b;
+  text-shadow: 0 2px 0 #f7e7c6, 0 6px 20px rgba(120, 70, 20, 0.25);
+  animation: floaty 3s ease-in-out infinite;
+}
+.loading-sub {
+  font-family: var(--hand);
+  font-size: 26px;
+  color: #9a7650;
+  margin-top: -4px;
+}
+.loading-bar {
+  margin: 18px auto 0;
+  width: 200px;
+  height: 6px;
+  border-radius: 6px;
+  background: rgba(138, 90, 43, 0.15);
+  overflow: hidden;
+}
+.loading-bar span {
+  display: block;
+  height: 100%;
+  width: 30%;
+  border-radius: 6px;
+  background: #c08a4a;
+  animation: loadbar 1.4s ease-in-out infinite;
+}
+@keyframes loadbar { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }
+@keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
