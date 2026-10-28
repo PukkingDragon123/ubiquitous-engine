@@ -5,7 +5,7 @@
 // goofy, and the same bodies go fully limp when knocked out or killed.
 import { clamp } from '../core/math.js';
 
-export const PF = { ACTIVE: 1, COLLIDE: 2, GROUND: 4, WATER: 8, HELD: 16 };
+export const PF = { ACTIVE: 1, COLLIDE: 2, GROUND: 4, WATER: 8, HELD: 16, GHOST: 32 };
 
 export class Verlet {
   constructor(sim, maxP = 7000, maxC = 14000) {
@@ -215,8 +215,9 @@ export class Verlet {
       let fl = flags[i];
       if (!(fl & PF.ACTIVE) || inv[i] === 0) continue;
       const r = rad[i];
+      const ghost = fl & PF.GHOST;
       // static circles (rocks, palms, round buildings)
-      for (let c = 0; c < cols.length; c++) {
+      for (let c = 0; c < (ghost ? 0 : cols.length); c++) {
         const C = cols[c];
         const dx = px[i] - C.x, dz = pz[i] - C.z;
         const rr = C.r + r;
@@ -228,7 +229,7 @@ export class Verlet {
         px[i] = C.x + (dx / d) * rr;
         pz[i] = C.z + (dz / d) * rr;
       }
-      for (let b = 0; b < boxes.length; b++) {
+      for (let b = 0; b < (ghost ? 0 : boxes.length); b++) {
         const B = boxes[b];
         const dx = px[i] - B.x, dz = pz[i] - B.z;
         const lx = dx * B.c + dz * B.s, lz = -dx * B.s + dz * B.c;

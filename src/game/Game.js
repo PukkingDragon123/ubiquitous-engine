@@ -96,6 +96,7 @@ export class Game {
     this.stats = { kills: 0, lost: 0, waves: 0, built: 0, gathered: 0 };
 
     this.verlet.onImpact = (i, speed) => this.events.emit('impact', i, speed);
+    if (this.params.has('low')) this.engine.setQuality('low');
     this._bindCameraControls();
     this._bindGlobalKeys();
     if (this.debug) this._makeDebugOverlay();

@@ -50,8 +50,8 @@ export class Possession {
     this._lockedOnce = false;
     game.rig.followTarget = u;
     game.rig.followYaw = u.yaw + Math.PI;
-    game.rig.followPitch = 0.28;
-    game.rig.followDist = 3.2;
+    game.rig.followPitch = 0.32;
+    game.rig.followDist = 3.9;
     game.rig.setMode('follow', { blendSpeed: 1.8 });
     game.interaction.clearSelection();
     game.input.requestLock();

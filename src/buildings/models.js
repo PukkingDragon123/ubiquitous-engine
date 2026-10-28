@@ -101,14 +101,17 @@ function finish(g) {
 function sandBox(w, h, d, bevel = 0.06) {
   const shape = new THREE.Shape();
   const hw = w / 2, hd = d / 2, b = Math.min(bevel, hw * 0.4, hd * 0.4);
+  // the bevel grows the extrusion on both caps, so take it out of the depth
+  // to keep the slab exactly h tall (models place things on top at y = h)
+  const bt = Math.min(b * 0.6, h * 0.45);
   shape.moveTo(-hw + b, -hd);
   shape.lineTo(hw - b, -hd); shape.quadraticCurveTo(hw, -hd, hw, -hd + b);
   shape.lineTo(hw, hd - b); shape.quadraticCurveTo(hw, hd, hw - b, hd);
   shape.lineTo(-hw + b, hd); shape.quadraticCurveTo(-hw, hd, -hw, hd - b);
   shape.lineTo(-hw, -hd + b); shape.quadraticCurveTo(-hw, -hd, -hw + b, -hd);
-  const g = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: true, bevelThickness: b * 0.6, bevelSize: b * 0.5, bevelSegments: 2, curveSegments: 3 });
+  const g = new THREE.ExtrudeGeometry(shape, { depth: Math.max(0.001, h - bt * 2), bevelEnabled: true, bevelThickness: bt, bevelSize: b * 0.5, bevelSegments: 2, curveSegments: 3 });
   g.rotateX(-Math.PI / 2);
-  g.translate(0, b * 0.6, 0);
+  g.translate(0, bt, 0);
   return g;
 }
 
@@ -218,7 +221,7 @@ export function keepModel() {
   const throneBack = makeShellGeometry('scallop');
   throneBack.scale(1.5, 1.5, 1.5);
   throneBack.rotateX(-Math.PI / 2 + 0.25);
-  b.add('shell', b.at(throneBack, 0, 1.55, 0.72), 0xffd6c4);
+  b.add('throne', b.at(throneBack, 0, 1.55, 0.72), 0xffd6c4);
   b.add('sand', b.at(sandBox(0.62, 0.26, 0.5, 0.08), 0, 1.0, 1.05));
   b.add('cloth', b.at(new THREE.BoxGeometry(0.6, 0.04, 0.5), 0, 1.3, 1.05), 0xc8323c);
   b.slots.throne = { x: 0, y: 1.32, z: 1.06, yaw: 0 };
@@ -232,6 +235,19 @@ export function keepModel() {
   // garrison spots on corner towers
   b.slots.garrison = [[-3, 2.95, -3], [3, 2.95, -3], [-3, 2.95, 3], [3, 2.95, 3]].map(([x, y, z]) => ({ x, y, z }));
   b.slots.interior = { x: 0, y: 0.6, z: -0.6, r: 1.1 };
+  // inside the keep: royal carpet, a shell treasure heap, a sandling-sized bed
+  b.add('interior', b.at(new THREE.BoxGeometry(0.5, 0.02, 1.8), 0, 0.56, 0.6), 0xb8323c);
+  b.add('interior', b.at(new THREE.BoxGeometry(0.56, 0.021, 1.86), 0, 0.555, 0.6), 0xf2c14e);
+  for (let i = 0; i < 14; i++) {
+    const a = rng() * Math.PI * 2, r = rng() * 0.35;
+    const g = new THREE.CylinderGeometry(0.05, 0.05, 0.015, 10);
+    g.rotateX(rng() * 0.6);
+    b.add('interior', b.at(g, 0.7 + Math.cos(a) * r, 0.58 + rng() * 0.12, -1.0 + Math.sin(a) * r), 0xffcf5a);
+  }
+  const kb = makeShellGeometry('clam');
+  kb.scale(1.1, 0.8, 1.6);
+  b.add('interior', b.at(kb, -0.65, 0.62, -0.9, 0.4), 0xffe3c2);
+  b.add('interior', b.at(new THREE.BoxGeometry(0.5, 0.05, 0.42), -0.65, 0.67, -0.85, 0.4), 0x8a3ac8);
   return b.build();
 }
 
@@ -268,6 +284,12 @@ export function campModel() {
     b.add('wood', b.at(s, 0, 0.2, 0), 0x6a4a2a);
   }
   b.slots.fire = { x: 0, y: 0.35, z: 0 };
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+    const roll = new THREE.CapsuleGeometry(0.11, 0.5, 4, 8);
+    roll.rotateZ(Math.PI / 2);
+    b.add('interior', b.at(roll, Math.cos(a) * 1.75, 0.3, Math.sin(a) * 1.75, -a), [0x6e8a3a, 0x8a5a3a, 0x5a6aa8, 0xa84a4a][i]);
+  }
   // shell storage pile
   for (let i = 0; i < 16; i++) {
     const a = rng() * Math.PI * 2, r = rng() * 0.45;
@@ -305,7 +327,19 @@ export function houseModel() {
   b.circle(0, 0, 1.15, 1.6);
   b.slots.door = { x: 0, z: 1.6 };
   b.slots.interior = { x: 0, y: 0.15, z: 0, r: 0.7 };
-  b.slots.beds = [{ x: -0.4, z: -0.3 }, { x: 0.4, z: -0.3 }, { x: 0, z: 0.3 }];
+  b.slots.beds = [{ x: -0.42, z: -0.3 }, { x: 0.42, z: -0.3 }, { x: 0, z: 0.38 }];
+  // clam-shell beds with seaweed blankets, a pebble table and a tiny candle
+  for (const bd of b.slots.beds) {
+    const bed = makeShellGeometry('clam');
+    bed.scale(0.85, 0.7, 1.25);
+    b.add('interior', b.at(bed, bd.x, 0.2, bd.z, Math.atan2(bd.x, bd.z)), 0xf6dcc4);
+    const blanket = new THREE.BoxGeometry(0.42, 0.04, 0.36);
+    b.add('interior', b.at(blanket, bd.x, 0.24, bd.z + 0.06, Math.atan2(bd.x, bd.z)), [0x5d8a3a, 0x7a9a4a, 0x4f7a36][Math.abs(Math.round(bd.x * 10)) % 3]);
+  }
+  const table = makeRockGeometry(321, { detail: 1, flat: 0.5 });
+  table.scale(0.18, 0.14, 0.18);
+  b.add('interior', b.at(table, 0.05, 0.2, -0.05), 0x9a9086);
+  b.add('interior', b.at(new THREE.CylinderGeometry(0.025, 0.025, 0.08, 6), 0.05, 0.31, -0.05), 0xfff4d0);
   return b.build();
 }
 
@@ -344,6 +378,13 @@ export function barracksModel() {
   b.box(0, -0.1, 2.1, 1.4, 1.6);
   b.slots.door = { x: 0, z: 2.0 };
   b.slots.interior = { x: 0, y: 0.25, z: -0.1, r: 1.2 };
+  for (let i = 0; i < 3; i++) {
+    b.add('interior', b.at(new THREE.BoxGeometry(0.42, 0.08, 0.8), -1.5 + i * 0.55, 0.3, -0.85), 0xb79a72);
+    b.add('interior', b.at(new THREE.BoxGeometry(0.36, 0.05, 0.6), -1.5 + i * 0.55, 0.36, -0.85), 0xc8463a);
+  }
+  for (let i = 0; i < 4; i++) b.add('interior', b.at(stick(0.7, 0.015), 1.2 + i * 0.12, 0.22, -0.95, 0, 0, 0.1), 0xe8d3a8);
+  b.add('interior', b.at(stick(0.55, 0.035), 1.2, 0.22, 0.4), 0x9a7a52);
+  b.add('interior', b.at(new THREE.SphereGeometry(0.16, 10, 8), 1.2, 0.85, 0.4), 0xe0bf8a);
   return b.build();
 }
 

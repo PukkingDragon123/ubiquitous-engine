@@ -164,6 +164,7 @@
 
 .scroll-card {
   position: absolute; left: 50%; bottom: 196px; transform: translateX(-50%) translateY(20px) scaleY(0.2);
+  max-height: calc(100vh - 230px); overflow: hidden;
   transform-origin: 50% 100%;
   width: min(380px, 90vw); padding: 14px 18px 16px;
   background:
@@ -182,7 +183,7 @@
 .scroll-card::after { bottom: -8px; }
 .scroll-card.on { opacity: 1; transform: translateX(-50%) translateY(0) scaleY(1); }
 .scroll-card h3 { margin: 0; font-family: var(--hand); font-size: 30px; font-weight: 700; color: #23406e; line-height: 1; }
-.scroll-card img { width: 100%; height: auto; display: block; margin: 4px 0 2px; }
+.scroll-card img { width: 100%; height: auto; max-height: min(30vh, 260px); object-fit: contain; display: block; margin: 4px 0 2px; }
 .scroll-card p { margin: 2px 0 8px; font-family: var(--hand); font-size: 19px; line-height: 1.1; color: #4a3828; }
 .scroll-card .costs { display: flex; flex-wrap: wrap; gap: 2px; }
 

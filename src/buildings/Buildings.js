@@ -372,8 +372,12 @@ export class Building {
     }
     // inspection roof lift
     this.lift = damp(this.lift, this.liftTarget, 5, dt);
-    this.liftGroup.position.y = this.lift * 3.2;
-    this.liftGroup.rotation.y = this.lift * 0.6;
+    // roofs pop off, spin and shrink away (dollhouse view)
+    this.liftGroup.position.y = this.lift * 2.4;
+    this.liftGroup.rotation.y = this.lift * 0.9;
+    const ls = Math.max(0.001, 1 - this.lift * this.lift);
+    this.liftGroup.scale.setScalar(ls);
+    this.liftGroup.visible = ls > 0.02;
     this.glow = Math.max(0, this.glow - dt * 1.5);
     u.uGlow.value = Math.max(this.glow, this.hover ? 0.35 : 0);
     u.uDamage.value = clamp(1 - (this.hp + this.waterDmg * 0.6) / this.maxHp, 0, 1) * (this.state === 'built' ? 1 : 0);

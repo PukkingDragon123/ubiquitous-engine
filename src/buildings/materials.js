@@ -18,6 +18,7 @@ export function makeBuildingSandMaterial() {
     uDamage: { value: 0 },
     uErode: { value: 0 },
     uGlow: { value: 0 },
+    uCutY: { value: 1e5 },
     uTint: { value: SAND_COL.clone() },
     uTime: globalUniforms.uTime,
     uCloudCover: globalUniforms.uCloudCover,
@@ -47,7 +48,7 @@ export function makeBuildingSandMaterial() {
         vWB = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>
-        uniform float uReveal, uBaseY, uHeight, uWet, uDamage, uErode, uGlow, uTime, uSeaLevel;
+        uniform float uReveal, uBaseY, uHeight, uWet, uDamage, uErode, uGlow, uTime, uSeaLevel, uCutY;
         uniform vec3 uTint;
         varying vec3 vWB;
         ${NOISE_GLSL}
@@ -55,7 +56,8 @@ export function makeBuildingSandMaterial() {
         float gBW; float gFresh;`)
       .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
         float cutY = uBaseY + uHeight * uReveal;
-        if (uReveal < 0.999 && vWB.y > cutY) discard;`)
+        if (uReveal < 0.999 && vWB.y > cutY) discard;
+        if (vWB.y > uCutY) discard; // dollhouse cutaway while inspecting`)
       .replace('#include <color_fragment>', `#include <color_fragment>
         {
           vec3 p = vWB;
@@ -84,6 +86,9 @@ export function makeBuildingSandMaterial() {
             c = mix(c, c * 0.35, crack * 0.85);
           }
           c += vec3(1.0, 0.85, 0.5) * uGlow * 0.25;
+          // inside faces revealed by the cutaway: darker, cool packed sand + a bright cut edge
+          if (!gl_FrontFacing) c *= vec3(0.55, 0.5, 0.48);
+          if (uCutY < 1e4) c = mix(c, vec3(0.95, 0.82, 0.6), smoothstep(0.06, 0.0, uCutY - vWB.y) * 0.8);
           diffuseColor.rgb = c;
         }`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
@@ -145,9 +150,12 @@ export function makeFlagGeometry(flags) {
 
 export function makeSharedBuildingMaterials() {
   const flat = (o) => new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0, ...o });
+  const shell = flat({ roughness: 0.6 });
   return {
     wood: flat({ roughness: 0.82 }),
-    shell: flat({ roughness: 0.6 }),
+    shell,
+    throne: shell.clone(),
+    interior: flat({ roughness: 0.75 }),
     stone: flat({ roughness: 0.85 }),
     dark: new THREE.MeshStandardMaterial({ color: 0x24170f, roughness: 1 }),
     cloth: flat({ roughness: 0.92, side: THREE.DoubleSide }),
@@ -180,9 +188,9 @@ export function makeGhostMaterial() {
         vec3 grid = abs(fract(vW * 2.0) - 0.5);
         float line = 1.0 - smoothstep(0.0, 0.05, min(min(grid.x, grid.y), grid.z));
         float scan = 0.5 + 0.5 * sin(vW.y * 12.0 - uTime * 4.0);
-        vec3 col = mix(vec3(1.0, 0.35, 0.3), vec3(0.55, 0.85, 1.0), uValid);
-        float a = 0.18 + fr * 0.55 + line * 0.25 + scan * 0.06;
-        gl_FragColor = vec4(col * (1.2 + line), a);
+        vec3 col = mix(vec3(1.0, 0.38, 0.3), vec3(0.42, 0.72, 1.0), uValid);
+        float a = 0.1 + fr * 0.45 + line * 0.3 + scan * 0.05;
+        gl_FragColor = vec4(col * (0.75 + line * 0.6), a);
       }`,
   });
   return mat;

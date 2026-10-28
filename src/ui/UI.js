@@ -345,10 +345,21 @@ export class UI {
     this.closeBlueprints();
     this.inspected = b;
     b.liftTarget = 1;
+    const cut = { keep: 1.85, house: 0.95, barracks: 1.15, tower: 1.4, shelter: 1.0, roost: 1.6 }[b.type];
+    if (cut) {
+      b.sandMat.side = THREE.DoubleSide;
+      b.sandMat.needsUpdate = true;
+      b.sandMat.userData.u.uCutY.value = b.baseY + cut;
+      // windows and pressed shells above the cut would float: tuck them away
+      const mats = game.buildings.mats;
+      this._cutHidden = b.details.children.filter((m) => m.isMesh && (m.material === mats.dark || m.material === mats.shell));
+      for (const m of this._cutHidden) m.visible = false;
+    }
     this._prevCam = { goal: game.rig.goal.clone(), dist: game.rig.goalDist };
     game.rig.mode = 'inspect';
     game.rig.goal.set(b.pos.x, b.baseY + b.height * 0.35, b.pos.z);
-    game.rig.goalDist = clamp(b.radius * 4.2 + 4, 7, 26);
+    game.rig.goalDist = clamp(b.radius * 3.2 + 3.5, 6, 20);
+    game.rig.goalPitchOffset = 0.18;
     game.interaction.clearSelection();
     this._spawnPuppets(b);
     this._renderInspect();
@@ -361,12 +372,20 @@ export class UI {
     const b = this.inspected;
     if (!b) return;
     b.liftTarget = 0;
+    if (b.sandMat.userData.u.uCutY.value < 1e4) {
+      b.sandMat.userData.u.uCutY.value = 1e5;
+      b.sandMat.side = THREE.FrontSide;
+      b.sandMat.needsUpdate = true;
+      for (const m of this._cutHidden || []) m.visible = true;
+      this._cutHidden = null;
+    }
     this.inspected = null;
     this.inspectEl.classList.remove('on');
     game.input.overUI = false;
     this._clearPuppets();
     if (game.rig.mode === 'inspect') {
       game.rig.mode = 'rts';
+      game.rig.goalPitchOffset = 0;
       if (this._prevCam && !silent) game.rig.goalDist = Math.max(this._prevCam.dist, 18);
     }
   }
@@ -389,7 +408,7 @@ export class UI {
       if (src) { u.color = src.color; u.hatColor = src.hatColor; }
       const y = b.baseY + (slot.y || 0.2);
       u.pos.y = y;
-      for (const pi of u.p) if (pi >= 0) game.verlet.teleport(pi, p.x, y + 0.5, p.z);
+      for (const pi of u.p) if (pi >= 0) { game.verlet.teleport(pi, p.x, y + 0.5, p.z); game.verlet.flags[pi] |= 32; game.verlet.flags[pi] &= ~2; }
       const night = game.sky.isNight;
       const act = night || b.type === 'house' ? 'sleep' : b.type === 'barracks' ? 'attack' : b.type === 'camp' ? 'talk' : pick(['talk', 'idle', 'wave']);
       u.sit = null;
