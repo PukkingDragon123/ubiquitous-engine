@@ -426,6 +426,7 @@ export class Props {
           const k = j * sim.W + i;
           const top = c.h - sim.h[k];
           sim.obst[k] = Math.max(sim.obst[k], top * Math.sqrt(1 - d2));
+          sim.obstRock[k] = sim.obst[k];
           sim.bed[k] = Math.max(sim.bed[k], sim.h[k] - 0.05); // can't dig under rocks
         }
       }

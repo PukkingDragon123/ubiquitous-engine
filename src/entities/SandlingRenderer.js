@@ -237,7 +237,7 @@ export class SandlingRenderer {
       _p.addScaledVector(HUP, -0.07 * hs);
       basisMatrix(_m, HLEFT, HUP, HFWD, _p, hs);
       this.band.push(_m, _c.set(0xd8442c));
-    } else if (hat === 'crown') {
+    } else if (hat === 'crown' && !u.crownHidden) {
       _p.addScaledVector(HUP, -0.03 * hs);
       // the oversized ring sits slightly crooked
       basisMatrix(_m, HLEFT, HUP, HFWD, _p, hs * 1.15).multiply(TILT);

@@ -27,6 +27,7 @@ export class BeachSim {
     this.bed = new Float32Array(N);
     this.wet = new Float32Array(N);
     this.obst = new Float32Array(N);
+    this.obstRock = new Float32Array(N); // static obstacles (rocks) for rebuilds
     this.d = new Float32Array(N);
     this.fxp = new Float32Array(N);
     this.fxn = new Float32Array(N);
@@ -568,6 +569,35 @@ export class BeachSim {
       }
     }
     this.activateArea(x, z, radius + 1);
+  }
+
+  // Level the sand toward height y inside a soft circle (building foundations).
+  flatten(x, z, r, y, strength = 1) {
+    const { W, H, h } = this;
+    const cs = this.cs;
+    const R = r * 1.35;
+    const i0 = Math.max(2, Math.floor((x - R - X0) / cs)), i1 = Math.min(W - 3, Math.ceil((x + R - X0) / cs));
+    const j0 = Math.max(2, Math.floor((z - R - Z0) / cs)), j1 = Math.min(H - 3, Math.ceil((z + R - Z0) / cs));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const d = Math.hypot(X0 + i * cs - x, Z0 + j * cs - z);
+      if (d > R) continue;
+      const f = d < r ? 1 : 1 - (d - r) / (R - r);
+      const k = j * W + i;
+      h[k] += (y - h[k]) * strength * f * f * (3 - 2 * f);
+      this.disturb[k] = Math.min(1, this.disturb[k] + 0.3 * f);
+    }
+    this.activateArea(x, z, R + 1);
+  }
+
+  // Average height in a circle.
+  avgHeight(x, z, r) {
+    let s = 0, n = 0;
+    for (let a = 0; a < 8; a++) {
+      const ang = (a / 8) * Math.PI * 2;
+      s += this.heightAt(x + Math.cos(ang) * r * 0.7, z + Math.sin(ang) * r * 0.7); n++;
+    }
+    s += this.heightAt(x, z) * 2; n += 2;
+    return s / n;
   }
 
   // Splat a small volume of sand into the 4 nearest nodes (particles landing).

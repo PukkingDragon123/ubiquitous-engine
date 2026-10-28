@@ -92,6 +92,10 @@ export class Sandling {
     this.swim = 0;
     this.possessed = false;
     this.mounted = !!this.def.mount;
+    this.jumpY = 0;
+    this.jumpV = 0;
+    this.manual = null;
+    this.perch = null;
     this._buildBody();
   }
 
@@ -351,9 +355,22 @@ export class Sandling {
   }
 
   _locomotion(dt) {
+    if (this.perch) {
+      this.pos.set(this.perch.x, this.perch.y, this.perch.z);
+      this.vel.set(0, 0, 0);
+      this.speed = 0;
+      if (this.lookAt) this.goalYaw = Math.atan2(this.lookAt.x - this.pos.x, this.lookAt.z - this.pos.z);
+      this.yaw = dampAngle(this.yaw, this.goalYaw, 8, dt);
+      return;
+    }
     if (!this.isActive || this.getup > 0) { this.vel.multiplyScalar(0.8); return; }
     const sim = this.game.sim;
     let desiredX = 0, desiredZ = 0;
+    if (this.manual) {
+      desiredX = this.manual.x * this.def.speed * (this.manual.sprint ? 1.6 : 1.15) * (1 - this.swim * 0.5);
+      desiredZ = this.manual.z * this.def.speed * (this.manual.sprint ? 1.6 : 1.15) * (1 - this.swim * 0.5);
+      this.moveTarget = null;
+    }
     const speed = this.def.speed * this.speedMul * (this.carry ? (this.carry.heavy ? 0.55 : 0.8) : 1) * (1 - this.swim * 0.55) * (this.panic > 0 ? 1.25 : 1);
     if (this.moveTarget && !this.sit) {
       const dx = this.moveTarget.x - this.pos.x, dz = this.moveTarget.z - this.pos.z;
@@ -390,8 +407,9 @@ export class Sandling {
     if (sp > 0.25) this.goalYaw = Math.atan2(this.vel.x, this.vel.z);
     if (this.lookAt && sp < 0.6) this.goalYaw = Math.atan2(this.lookAt.x - this.pos.x, this.lookAt.z - this.pos.z);
     if (this.sit) { this.pos.x = this.sit.x; this.pos.z = this.sit.z; this.goalYaw = this.sit.yaw; }
-    this.yaw = dampAngle(this.yaw, this.goalYaw, 10, dt);
-    const ground = sim.heightAt(this.pos.x, this.pos.z);
+    if (this.manual && this.manual.face !== undefined) this.goalYaw = this.manual.face;
+    this.yaw = dampAngle(this.yaw, this.goalYaw, this.manual ? 16 : 10, dt);
+    const ground = this.game.walkHeight(this.pos.x, this.pos.z);
     const surf = ground + sim.depthAt(this.pos.x, this.pos.z);
     this.pos.y = this.swim > 0 ? lerp(ground, surf - 0.62 * this.scale, this.swim) : ground;
     this.speed = sp;
@@ -417,6 +435,12 @@ export class Sandling {
 
     let tilt = 0; // forward lean of the whole body (radians)
     let rootY = 0;
+    if (this.jumpY > 0 || this.jumpV > 0) {
+      this.jumpV -= 14 * dt;
+      this.jumpY = Math.max(0, this.jumpY + this.jumpV * dt);
+      if (this.jumpY === 0) this.jumpV = 0;
+      rootY += this.jumpY;
+    }
     const idleT = t + this.id * 1.37;
 
     // ----- legs -----
@@ -568,8 +592,9 @@ export class Sandling {
       let wx = this.pos.x + (b.lx * lx + b.fx * lz) * s;
       let wz = this.pos.z + (b.lz * lx + b.fz * lz) * s;
       let wy = baseY + ly * s + rootY;
-      if ((j === J.LFOOT || j === J.RFOOT) && !this.sit && this.swim < 0.5) {
-        wy = Math.max(sim.heightAt(wx, wz) + (ly - 0.06) * s + RADII[j] * s, wy - 0.2);
+      if ((j === J.LFOOT || j === J.RFOOT) && !this.sit && this.swim < 0.5 && !(this.jumpY > 0)) {
+        const ground = this.perch ? this.perch.y : this.game.walkHeight(wx, wz);
+        wy = Math.max(ground + (ly - 0.06) * s + RADII[j] * s, wy - 0.2);
       }
       let k = k0;
       if (j === J.LHAND || j === J.RHAND) k *= 0.42;
