@@ -15,7 +15,7 @@ npm install
 npm run dev
 ```
 
-Open the address Vite prints (usually http://localhost:5173). You need a browser with WebGL2 (recent Chrome, Edge, Firefox or Safari) and a reasonably capable GPU. Sound starts after your first click, because browsers block audio until then. The buttons in the bottom-left corner pause the game, open the settings (graphics quality, depth of field, volumes) and show the controls.
+Open the address Vite prints (usually http://localhost:5173). You need a browser with WebGL2 (recent Chrome, Edge, Firefox or Safari) and a reasonably capable GPU. Sound starts after your first click, because browsers block audio until then. The buttons in the bottom-left corner pause the game, open the settings (graphics quality, depth of field, volumes) and show the controls. The game is designed for a mouse and keyboard.
 
 ```bash
 npm run build      # static build in dist/, can be hosted anywhere

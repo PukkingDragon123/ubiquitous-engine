@@ -220,19 +220,19 @@ export class Director {
     for (let i = 0; i < n; i++) {
       const r = Math.random();
       const type = r < 0.4 ? 'shell' : r < 0.6 ? 'pebble' : r < 0.75 ? 'seaweed' : r < 0.87 ? 'driftwood' : r < 0.95 ? 'gem' : 'coin';
-      setTimeout(() => game.items.washAshore(type, rnd(-40, 40)), i * 250);
+      game.after(i * 0.25, () => game.items.washAshore(type, rnd(-40, 40)));
     }
     const next = BLUEPRINT_ORDER.find((k) => !game.economy.unlocked.has(k) && !this._bottled?.has(k));
     if (next) {
       (this._bottled || (this._bottled = new Set())).add(next);
-      setTimeout(() => {
+      game.after(2.5, () => {
         const b = game.items.washAshore('bottle', rnd(-15, 15));
         b.payload = { blueprint: next };
         game.events.emit('bottleArrived', b);
-      }, 2500);
+      });
     }
     if (this.wave >= 2 && Math.random() < 0.7) {
-      setTimeout(() => { const j = game.items.washAshore('jar', rnd(-25, 25)); game.events.emit('jarArrived', j); }, 4000);
+      game.after(4, () => { const j = game.items.washAshore('jar', rnd(-25, 25)); game.events.emit('jarArrived', j); });
     }
   }
 
@@ -284,6 +284,6 @@ export class Director {
   _kingDied() {
     const game = this.game;
     game.events.emit('kingDied', game.king);
-    setTimeout(() => game.gameOver(), 2500);
+    game.after(2.5, () => game.gameOver());
   }
 }

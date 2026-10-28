@@ -90,6 +90,7 @@ export class Game {
     this.frame = 0;
     this.fps = 60;
     this.physAcc = 0;
+    this._timers = [];
     this.physTime = 0;
     this.keep = null;
     this.king = null;
@@ -276,6 +277,20 @@ export class Game {
     this._debugEl = el;
   }
 
+  // Run fn after `sec` seconds of game time: waits while paused, stretches in slow motion.
+  after(sec, fn) {
+    this._timers.push({ t: this.time + sec, fn });
+  }
+
+  _runTimers() {
+    if (!this._timers.length) return;
+    const now = this.time;
+    const due = this._timers.filter((x) => x.t <= now);
+    if (!due.length) return;
+    this._timers = this._timers.filter((x) => x.t > now);
+    for (const x of due) x.fn();
+  }
+
   // ---- debug helpers -------------------------------------------------------
   fastForward(seconds) {
     const steps = Math.round(seconds * 60);
@@ -292,6 +307,7 @@ export class Game {
       this.projectiles.update(dt);
       this.particles.update(dt);
       this.intro.update(dt);
+      this._runTimers();
     }
   }
 
@@ -348,6 +364,7 @@ export class Game {
       this.projectiles.update(dt);
       this.particles.update(dt);
       this.intro.update(dt);
+      this._runTimers();
     }
     globalUniforms.uSeaLevel.value = this.sim.seaLevel;
 
