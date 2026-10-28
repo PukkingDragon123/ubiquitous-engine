@@ -409,6 +409,12 @@
 .boss-bar .b { height: 12px; border-radius: 8px; background: rgba(60, 10, 4, 0.35); overflow: hidden; box-shadow: 0 4px 14px rgba(60,10,4,0.3); margin-top: 3px; }
 .boss-bar .b span { display: block; height: 100%; background: linear-gradient(90deg, #e2553f, #ffb06a); transition: width 0.25s; }
 
+/* not enough room beside the resource pills: tuck the tide status into the top-right corner */
+@media (max-width: 1180px) and (min-width: 721px) {
+  .tide { left: auto; right: 18px; transform: none; }
+  .res-bar { max-width: calc(100vw - 300px); }
+}
+
 @media (max-width: 720px) {
   .tool { width: 44px; height: 44px; padding: 6px; border-radius: 13px; }
   .res { font-size: 14px; padding: 2px 8px 2px 3px; }
