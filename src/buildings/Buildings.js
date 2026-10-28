@@ -565,12 +565,17 @@ export class Buildings {
     }
     const focus = game.rig.focusPoint;
     fires.sort((a, c) => (a.x - focus.x) ** 2 + (a.z - focus.z) ** 2 - ((c.x - focus.x) ** 2 + (c.z - focus.z) ** 2));
+    // a cosy lamp inside whatever building is being peeked into
+    const insp = game.ui && game.ui.inspected;
+    const room = insp && insp.alive && insp.sandMat.userData.u.uCutY.value < 1e4 && insp.slot('interior');
+    if (room) fires.unshift({ x: room.x, y: room.y + 0.75, z: room.z, k: 1, inside: insp.radius * 1.5 });
     this.lights.forEach((l, i) => {
       const f = fires[i];
       if (!f) { l.intensity = 0; return; }
       l.position.set(f.x, f.y, f.z);
       const flick = 0.85 + 0.15 * Math.sin(game.time * 13 + i * 2) * Math.sin(game.time * 7.7 + i);
-      l.intensity = (0.4 + night * 5) * f.k * flick;
+      l.distance = f.inside || 9;
+      l.intensity = (f.inside ? 2.6 + night * 2 : (0.4 + night * 5) * f.k) * flick;
     });
   }
 

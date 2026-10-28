@@ -359,7 +359,8 @@ export class UI {
     game.rig.mode = 'inspect';
     game.rig.goal.set(b.pos.x, b.baseY + b.height * 0.35, b.pos.z);
     game.rig.goalDist = clamp(b.radius * 3.2 + 3.5, 6, 20);
-    game.rig.goalPitchOffset = 0.18;
+    // look down into cut-open rooms; peek at open-air ones from the side
+    game.rig.goalPitchOffset = cut ? 0.5 : 0.18;
     game.interaction.clearSelection();
     this._spawnPuppets(b);
     this._renderInspect();
